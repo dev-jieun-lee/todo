@@ -193,7 +193,7 @@ const Sidebar = () => {
   const location = useLocation();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const { username } = useUser();
+  const { username, role } = useUser();
   const toggleMenu = (label: string) => {
     setOpenMenus((prev) =>
       prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label]
@@ -209,7 +209,10 @@ const Sidebar = () => {
         )
     );
 
-  const filteredMenuItems = filterMenuItems(menuItems);
+  const filteredMenuItems = filterMenuItems(menuItems).filter((item) => {
+    if (item.id.startsWith("admin-") && role !== "admin") return false;
+    return true;
+  });
 
   return (
     <aside className="w-64 bg-white h-screen border-r px-6 py-6 shadow-sm overflow-y-auto">
