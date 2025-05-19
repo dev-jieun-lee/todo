@@ -1,0 +1,1 @@
+common_codes → teams → users 순서로 insert 해야 외래키 오류가 없음

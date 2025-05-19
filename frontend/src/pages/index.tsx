@@ -1,7 +1,8 @@
 // 🏠 그룹웨어 홈 (pages/index.tsx)
 
 import { Link } from "react-router-dom";
-import { useUser } from "../contexts/UserContext";
+import { useUser } from "../contexts/useUser";
+
 const Home = () => {
   const { username } = useUser();
   return (

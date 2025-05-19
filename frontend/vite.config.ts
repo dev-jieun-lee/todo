@@ -6,7 +6,15 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      "@": path.resolve("src"), // ✅ 현재 디렉토리 기준
+      "@": path.resolve("src"),
+    },
+  },
+  server: {
+    proxy: {
+      "/api": {
+        target: "http://localhost:4000",
+        changeOrigin: true,
+      },
     },
   },
 });

@@ -1,0 +1,143 @@
+-- 공통코드 테이블: 부서, 직책, KPI 카테고리, 일정 태그 등 다양한 분류 관리
+CREATE TABLE IF NOT EXISTS common_codes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,         -- 고유 ID
+  code_group TEXT NOT NULL,                     -- 코드 그룹명 (예: department, position, calendar_tag, kpi_category)
+  code TEXT NOT NULL,                           -- 코드 값 (예: DEV, MGR)
+  label TEXT NOT NULL,                          -- 표시용 라벨 (예: 개발팀, 매니저)
+  sort_order INTEGER DEFAULT 0,                 -- 정렬 순서
+  active INTEGER DEFAULT 1                      -- 사용 여부 (1: 사용, 0: 미사용)
+);
+
+-- 팀 테이블: 사용자 소속 팀 관리용
+CREATE TABLE IF NOT EXISTS teams (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,         -- 팀 고유 ID
+  code TEXT NOT NULL UNIQUE,                    -- 팀 코드 (예: TEAM_DEV)
+  name TEXT NOT NULL                             -- 팀 이름
+);
+
+-- 사용자 테이블: 로그인과 사용자 정보 저장
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,         -- 사용자 고유 ID
+  employee_number TEXT UNIQUE,                  -- 사번 (외부 고유번호, 예: EMP001)
+  username TEXT NOT NULL UNIQUE,                -- 로그인 아이디
+  password TEXT NOT NULL,                       -- 비밀번호 (암호화 저장 권장)
+  name TEXT,                                     -- 실명
+  email TEXT,                                    -- 이메일 주소
+  role TEXT DEFAULT 'user',                     -- 역할: user, admin
+  department_code TEXT,                         -- 부서 코드 (common_codes 참조)
+  position_code TEXT,                           -- 직급 코드 (common_codes 참조)
+  team_code TEXT,                               -- 소속 팀 코드 (teams.code 참조)
+  status TEXT DEFAULT 'active',                 -- 계정 상태: active, locked, retired 등
+  hire_date TEXT,                                -- 입사일 (YYYY-MM-DD)
+  leave_date TEXT,                               -- 퇴사일 (YYYY-MM-DD)
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,-- 생성일
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,-- 수정일
+  FOREIGN KEY(team_code) REFERENCES teams(code)
+);
+
+
+-- To-do 테이블: 실행계획 및 업무 관리
+CREATE TABLE IF NOT EXISTS todos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,         -- 할 일 ID
+  user_id INTEGER,                              -- 담당자 (users.id 참조)
+  title TEXT NOT NULL,                          -- 제목
+  is_done INTEGER DEFAULT 0,                    -- 완료 여부 (0: 미완료, 1: 완료)
+  status TEXT DEFAULT '예정',                   -- 상태: 예정, 완료, 중단
+  due_date TEXT,                                -- 마감일 (YYYY-MM-DD)
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,-- 생성일
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+-- KPI 기록 테이블
+CREATE TABLE IF NOT EXISTS kpi_records (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,         -- KPI ID
+  user_id INTEGER,                              -- 작성자 (users.id)
+  title TEXT NOT NULL,                          -- KPI 항목명
+  target_value REAL,                            -- 목표값
+  current_value REAL,                           -- 현재 달성값
+  start_date TEXT,                              -- 시작일
+  end_date TEXT,                                -- 종료일
+  category TEXT,                                -- 카테고리 (예: 생산성, 효율성)
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,-- 생성일
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+-- 휴가 신청 테이블
+CREATE TABLE IF NOT EXISTS vacations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,         -- 휴가 ID
+  user_id INTEGER,                              -- 신청자 (users.id)
+  type TEXT,                                    -- 휴가 유형 (연차, 반차 등)
+  start_date TEXT,                              -- 시작일
+  end_date TEXT,                                -- 종료일
+  status TEXT DEFAULT '대기',                   -- 상태: 대기, 승인, 반려
+  reason TEXT,                                  -- 사유
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,-- 생성일
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+-- 공지사항 테이블
+CREATE TABLE IF NOT EXISTS notices (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,         -- 공지 ID
+  title TEXT NOT NULL,                          -- 제목
+  content TEXT,                                 -- 내용
+  target_role TEXT DEFAULT 'all',               -- 대상: all, admin, user
+  team_code TEXT,                               -- 팀 공지인 경우 (teams.code)
+  created_by INTEGER,                           -- 작성자 (users.id)
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,-- 작성일
+  FOREIGN KEY(team_code) REFERENCES teams(code),
+  FOREIGN KEY(created_by) REFERENCES users(id)
+);
+
+-- 익명 제안함 테이블
+CREATE TABLE IF NOT EXISTS suggestions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,         -- 제안 ID
+  content TEXT NOT NULL,                        -- 내용
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP -- 작성일
+);
+
+-- 게시판 테이블: 자유, 팀, 프로젝트 등 구분 포함
+CREATE TABLE IF NOT EXISTS boards (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,         -- 게시글 ID
+  type TEXT,                                    -- 게시판 타입: free, team, project
+  team_code TEXT,                               -- 팀 게시판의 경우
+  title TEXT NOT NULL,                          -- 제목
+  content TEXT,                                 -- 본문
+  created_by INTEGER,                           -- 작성자 (users.id)
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,-- 작성일
+  FOREIGN KEY(team_code) REFERENCES teams(code),
+  FOREIGN KEY(created_by) REFERENCES users(id)
+);
+
+-- 캘린더 일정 테이블
+CREATE TABLE IF NOT EXISTS calendar_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,         -- 일정 ID
+  title TEXT NOT NULL,                          -- 일정 제목
+  type TEXT,                                    -- 일정 유형: meeting, deploy, vacation 등
+  start_date TEXT,                              -- 시작일
+  end_date TEXT,                                -- 종료일
+  team_code TEXT,                               -- 소속 팀
+  created_by INTEGER,                           -- 작성자
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,-- 생성일
+  FOREIGN KEY(team_code) REFERENCES teams(code),
+  FOREIGN KEY(created_by) REFERENCES users(id)
+);
+
+-- 첨부파일 테이블
+CREATE TABLE IF NOT EXISTS attachments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,         -- 첨부파일 ID
+  board_id INTEGER,                             -- 게시판 글 ID (boards.id)
+  filename TEXT,                                -- 원본 파일명
+  filepath TEXT,                                -- 저장 경로
+  uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,-- 업로드 일시
+  FOREIGN KEY(board_id) REFERENCES boards(id)
+);
+
+-- 시스템 로그 테이블
+CREATE TABLE IF NOT EXISTS system_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,         -- 로그 ID
+  user_id INTEGER,                              -- 사용자 ID
+  action TEXT,                                  -- 수행된 액션 (예: 로그인, 수정 등)
+  detail TEXT,                                  -- 상세 설명
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,-- 기록 시각
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);

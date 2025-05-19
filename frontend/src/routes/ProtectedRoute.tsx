@@ -1,6 +1,6 @@
 //	로그인 및 권한 분기 제어
 import { Navigate } from "react-router-dom";
-import { useUser } from "../contexts/UserContext";
+import { useUser } from "../contexts/useUser";
 
 const ProtectedRoute = ({
   element,

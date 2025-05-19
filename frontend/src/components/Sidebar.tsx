@@ -10,7 +10,7 @@ import {
   UserIcon,
   SettingsIcon,
 } from "./Icons";
-import { useUser } from "../contexts/UserContext";
+import { useUser } from "../contexts/useUser";
 
 // 메뉴 타입 정의
 type MenuItem = {

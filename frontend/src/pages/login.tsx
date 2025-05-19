@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useUser } from "../contexts/useUser";
 import axios from "axios";
-import { useUser } from "../contexts/UserContext";
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -12,18 +12,34 @@ const Login = () => {
   const handleLogin = async () => {
     try {
       const res = await axios.post("/api/login", { username, password });
-      const { token, role, username: returnedUsername } = res.data;
+
+      const { token, user } = res.data; // 🔑 서버에서 token과 user 정보 반환
+
+      // ✅ localStorage에 저장
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+
+      // ✅ Context에도 저장
 
       login({
-        username: returnedUsername, // 서버에서 받은 실제 사용자명
         token,
-        role, // "user" 또는 "admin"
+        username: user.username,
+        name: user.name,
+        role: user.role,
       });
 
       navigate("/");
     } catch (err) {
-      console.error("로그인 오류:", err);
-      alert("로그인 실패: 사용자명 또는 비밀번호를 확인하세요.");
+      if (axios.isAxiosError(err)) {
+        console.error("Axios 에러:", err.message);
+        alert(
+          err.response?.data?.error ||
+            "로그인 실패: 사용자명 또는 비밀번호를 확인하세요."
+        );
+      } else {
+        console.error("알 수 없는 오류:", err);
+        alert("알 수 없는 오류가 발생했습니다.");
+      }
     }
   };
 
