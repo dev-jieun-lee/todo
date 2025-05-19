@@ -123,7 +123,9 @@ const Sidebar = () => {
 
   return (
     <aside className="w-64 bg-white h-screen border-r px-6 py-6 shadow-sm overflow-y-auto">
-      <h1 className="text-2xl font-bold mb-4">그룹웨어</h1>
+      <Link to="/" className="text-2xl font-bold mb-4 block">
+        그룹웨어
+      </Link>
 
       {/* 🔍 메뉴 검색 */}
       <input
