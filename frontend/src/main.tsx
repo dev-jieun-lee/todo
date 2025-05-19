@@ -6,6 +6,7 @@ import "./index.css"; // Tailwind 등 스타일 불러오기
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App /> // 여기서 App.tsx를 실행
+    <App />
+    {/* // 여기서 App.tsx를 실행 */}
   </React.StrictMode>
 );

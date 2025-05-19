@@ -14,11 +14,12 @@ import { useUser } from "../contexts/useUser";
 
 // 메뉴 타입 정의
 type MenuItem = {
-  id: string; // 고유 key
+  id: string;
   label: string;
   path?: string;
   icon?: React.ReactNode;
   children?: MenuItem[];
+  roles?: string[];
 };
 
 // 전체 메뉴 정의
@@ -142,6 +143,7 @@ const menuItems: MenuItem[] = [
     id: "admin-users",
     label: "사용자 / 권한 관리 (관리자)",
     icon: <UserIcon />,
+    roles: ["ADMIN"],
     children: [
       {
         id: "admin-users-list",
@@ -164,6 +166,7 @@ const menuItems: MenuItem[] = [
     id: "admin-settings",
     label: "시스템 설정 (관리자)",
     icon: <SettingsIcon />,
+    roles: ["ADMIN"],
     children: [
       {
         id: "admin-settings-categories",
@@ -210,7 +213,7 @@ const Sidebar = () => {
     );
 
   const filteredMenuItems = filterMenuItems(menuItems).filter((item) => {
-    if (item.id.startsWith("admin-") && role !== "admin") return false;
+    if (item.roles && !item.roles.includes(role)) return false;
     return true;
   });
 
