@@ -1,14 +1,13 @@
 // 🏠 그룹웨어 홈 (pages/index.tsx)
 
 import { Link } from "react-router-dom";
-
+import { useUser } from "../contexts/UserContext";
 const Home = () => {
+  const { username } = useUser();
   return (
     <div className="p-8 text-center">
       {/* 👋 사용자 인사말 */}
-      <h2 className="text-xl text-gray-800 font-semibold mb-2">
-        안녕하세요, <span className="text-blue-600">사용자님</span> 👋
-      </h2>
+      <h1 className="text-2xl font-bold">안녕하세요, {username}님 👋</h1>
 
       {/* 🎉 환영 메시지 */}
       <h1 className="text-3xl font-bold text-gray-800 mb-4">
@@ -55,7 +54,7 @@ const Home = () => {
       {/* 📢 최근 공지사항 */}
       <div className="mt-12 text-left max-w-4xl mx-auto">
         <h3 className="text-xl font-semibold mb-3">📢 최근 공지사항</h3>
-        <ul className="space-y-2 text-sm text-gray-700">
+        <ul className="text-sm text-gray-700 space-y-1 leading-relaxed">
           <li className="border-b pb-2">
             [공지] 5월 정기 점검 안내 – 5월 22일(수)
           </li>
