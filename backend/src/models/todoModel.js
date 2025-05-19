@@ -1,4 +1,5 @@
 const db = require("../config/db");
+const { logHistory } = require("./todoHistoryModel");
 
 // ✅ 히스토리 테이블 생성
 db.run(`CREATE TABLE IF NOT EXISTS todo_history (
@@ -8,14 +9,6 @@ db.run(`CREATE TABLE IF NOT EXISTS todo_history (
   details TEXT,
   timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
 )`);
-
-// ✅ 히스토리 기록 함수
-const logHistory = (todo_id, action, details = "") => {
-  db.run(
-    "INSERT INTO todo_history (todo_id, action, details) VALUES (?, ?, ?)",
-    [todo_id, action, details]
-  );
-};
 
 // ✅ todos 테이블 생성
 db.run(`CREATE TABLE IF NOT EXISTS todos (
@@ -33,7 +26,7 @@ module.exports = {
   createTodo: (title, callback) => {
     db.run("INSERT INTO todos (title) VALUES (?)", [title], function (err) {
       if (!err) {
-        logHistory(this.lastID, "CREATE", `title: ${title}`);
+        logHistory(this.lastID, "CREATE", `title: ${title}`, "userA");
       }
       callback(err, { id: this.lastID, title, is_done: 0 });
     });
@@ -45,7 +38,7 @@ module.exports = {
       [is_done, id],
       function (err) {
         if (!err) {
-          logHistory(id, "UPDATE", `is_done: ${is_done}`);
+          logHistory(id, "UPDATE", `is_done: ${is_done}`, "userA");
         }
         callback(err);
       }
@@ -55,7 +48,7 @@ module.exports = {
   deleteTodo: (id, callback) => {
     db.run("DELETE FROM todos WHERE id = ?", [id], function (err) {
       if (!err) {
-        logHistory(id, "DELETE", `todo deleted`);
+        logHistory(id, "DELETE", `todo deleted`, "userA");
       }
       callback(err);
     });

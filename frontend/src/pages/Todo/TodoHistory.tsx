@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import PageHeader from "../../components/PageHeader";
 
 interface HistoryItem {
   id: number;
@@ -23,6 +24,7 @@ const TodoHistory = () => {
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
+      <PageHeader />
       <h2 className="text-2xl font-bold mb-4">📜 전체 TODO 이력</h2>
       {history.length === 0 ? (
         <p className="text-gray-500">이력이 없습니다.</p>
