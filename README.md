@@ -1,6 +1,16 @@
-# todo
+# todo 실행방법
 
-프론트엔드 node server.js
+백엔드프론트엔드
+
+cd backend
+
+node server.js
+
+프론트엔드
+
+cd frontend
+
+npm run dev
 
 src/
 ├─ main.tsx ← 앱 시작 파일
@@ -9,4 +19,8 @@ src/
 ├─ layouts/ ← 공통 레이아웃(Header, Sidebar)
 └─ pages/ ← 실제 각각의 화면들
 
-백엔드 npm run dev
+백엔드
+
+cd backend
+
+npm run dev
