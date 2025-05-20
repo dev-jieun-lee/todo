@@ -14,14 +14,20 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  console.log(
+    "📤 요청 보내기:",
+    config.method?.toUpperCase(),
+    config.url,
+    config.headers.Authorization
+  );
   return config;
 });
-
 // 응답 인터셉터: 401 → 토큰 재발급 → 요청 재시도
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const originalRequest = error.config;
+    console.warn("📛 응답 에러:", error.response?.status, originalRequest.url);
 
     if (
       error.response?.status === 401 &&
@@ -32,14 +38,18 @@ api.interceptors.response.use(
 
       try {
         logEvent("🔄 Access Token 재발급 시도");
-        const res = await api.post("/refresh", {}, { withCredentials: true });
+        const res = await api.post(
+          "/auth/refresh",
+          {},
+          { withCredentials: true }
+        ); // ✅ 여기도 경로 다시 확인
         const newToken = res.data.token;
 
-        updateTokenEverywhere(newToken); // 저장소 갱신
+        updateTokenEverywhere(newToken);
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        logEvent("✅ Access Token 재발급 성공 → 요청 재시도");
 
-        logEvent("Access Token 재발급 성공");
-        return api(originalRequest); // 원래 요청 재시도
+        return api(originalRequest);
       } catch (err) {
         logEvent(`❌ Access Token 재발급 실패: ${String(err)}`);
         localStorage.removeItem("auth");
@@ -47,7 +57,7 @@ api.interceptors.response.use(
       }
     }
 
-    return Promise.reject(error); // 다른 에러는 그대로 반환
+    return Promise.reject(error);
   }
 );
 

@@ -25,7 +25,7 @@ export default function MyProfilePage() {
 
   useEffect(() => {
     api
-      .get("/my-profile-details")
+      .get("/profile/my-profile-details")
       .then((res) => setProfile(res.data))
       .catch((err) => {
         handleApiError(err, "내 정보 조회에 실패했습니다.");

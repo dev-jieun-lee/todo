@@ -213,7 +213,7 @@ const Sidebar = () => {
 
   const handleMenuClick = async (label: string, path: string) => {
     try {
-      await api.post("/menu-access", { label, path });
+      await api.post("/log/menu-access", { label, path });
     } catch (err) {
       console.warn("❗ 메뉴 접근 로그 실패:", err);
     }
