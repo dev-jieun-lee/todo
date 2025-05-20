@@ -1,6 +1,6 @@
-//	로그인 및 권한 분기 제어
 import { Navigate } from "react-router-dom";
 import { useUser } from "../contexts/useUser";
+import { checkAccess } from "../utils/checkAccess";
 
 const ProtectedRoute = ({
   element,
@@ -12,9 +12,13 @@ const ProtectedRoute = ({
   const { token, role } = useUser();
 
   if (!token) return <Navigate to="/login" />;
-  if (requireAdmin && role !== "admin") return <Navigate to="/error/403" />;
 
-  return element;
+  // 관리자 권한 필요 시 checkAccess 활용
+  if (!checkAccess(role, requireAdmin ? ["ADMIN"] : undefined)) {
+    return <Navigate to="/error/403" />;
+  }
+
+  return element; // ✅ 이거 빠졌었음
 };
 
 export default ProtectedRoute;

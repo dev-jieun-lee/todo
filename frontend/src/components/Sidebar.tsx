@@ -11,7 +11,8 @@ import {
   SettingsIcon,
 } from "./Icons";
 import { useUser } from "../contexts/useUser";
-
+import { checkAccess } from "../utils/checkAccess";
+import type { RoleType } from "../contexts/types";
 // 메뉴 타입 정의
 type MenuItem = {
   id: string;
@@ -19,7 +20,7 @@ type MenuItem = {
   path?: string;
   icon?: React.ReactNode;
   children?: MenuItem[];
-  roles?: string[];
+  roles?: RoleType[];
 };
 
 // 전체 메뉴 정의
@@ -213,8 +214,7 @@ const Sidebar = () => {
     );
 
   const filteredMenuItems = filterMenuItems(menuItems).filter((item) => {
-    if (item.roles && !item.roles.includes(role)) return false;
-    return true;
+    return checkAccess(role, item.roles);
   });
 
   return (
