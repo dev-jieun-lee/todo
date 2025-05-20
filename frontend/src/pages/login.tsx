@@ -11,7 +11,7 @@ const Login = () => {
 
   const handleLogin = async () => {
     try {
-      const res = await axios.post("/api/login", { username, password });
+      const res = await axios.post("/api/auth/login", { username, password });
 
       const { token, user } = res.data; // 🔑 서버에서 token과 user 정보 반환
 
