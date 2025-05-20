@@ -15,10 +15,6 @@ const Login = () => {
 
       const { token, user } = res.data; // 🔑 서버에서 token과 user 정보 반환
 
-      // ✅ localStorage에 저장
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
-
       // ✅ Context에도 저장
 
       login({

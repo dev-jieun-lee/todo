@@ -1,5 +1,5 @@
 //Provider 컴포넌트	UserProvider
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { UserContext } from "./Usercontext";
 import type { UserContextType, RoleType } from "./types";
@@ -44,6 +44,17 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     setRole("user");
     localStorage.removeItem("auth");
   };
+
+  useEffect(() => {
+    const stored = localStorage.getItem("auth");
+    if (stored) {
+      const { username, name, token, role } = JSON.parse(stored);
+      setUsername(username);
+      setName(name);
+      setToken(token);
+      setRole(role);
+    }
+  }, []);
 
   return (
     <UserContext.Provider
