@@ -5,6 +5,11 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 
 const SECRET_KEY = process.env.SECRET_KEY;
+const {
+  saveRefreshToken,
+  findRefreshToken,
+  deleteRefreshToken,
+} = require("../models/refreshTokenModel");
 
 const login = (req, res) => {
   const { username, password } = req.body;
@@ -61,11 +66,10 @@ const login = (req, res) => {
           username: user.username,
           role: user.role,
         };
-
-        const accessToken = jwt.sign(payload, SECRET_KEY, { expiresIn: "15m" }); // ⏱ 짧은 Access
+        const accessToken = jwt.sign(payload, SECRET_KEY, { expiresIn: "15m" });
         const refreshToken = jwt.sign(payload, SECRET_KEY, {
           expiresIn: "14d",
-        }); // 긴 Refresh
+        });
 
         insertSystemLog(
           user.id,
@@ -77,20 +81,15 @@ const login = (req, res) => {
         );
 
         // Refresh Token을 db에 저장
-        const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14일
-
-        db.run(
-          "INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, ?, ?)",
-          [user.id, refreshToken, expiresAt.toISOString()],
+        const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+        saveRefreshToken(
+          user.id,
+          refreshToken,
+          expiresAt.toISOString(),
           (err) => {
-            if (err) {
-              console.error("❌ Refresh Token 저장 실패:", err.message);
-            } else {
-              console.log("✅ Refresh Token 저장 완료");
-            }
+            if (err) console.error("❌ Refresh Token 저장 실패");
           }
         );
-
         // Refresh Token을 HttpOnly 쿠키로 저장
         res.cookie("refreshToken", refreshToken, {
           httpOnly: true,
@@ -129,7 +128,10 @@ const login = (req, res) => {
 const logout = (req, res) => {
   const refreshToken = req.cookies.refreshToken;
   if (refreshToken) {
-    db.run("DELETE FROM refresh_tokens WHERE token = ?", [refreshToken]);
+    deleteRefreshToken(refreshToken, (err) => {
+      if (err) console.error("❌ 토큰 삭제 실패:", err.message);
+      else console.log("✅ 토큰 삭제 완료");
+    });
     res.clearCookie("refreshToken");
   }
 
@@ -148,33 +150,29 @@ const refresh = (req, res) => {
     return res.status(401).json({ error: "Refresh Token 없음" });
 
   // DB에서 토큰 존재 여부 확인
-  db.get(
-    "SELECT * FROM refresh_tokens WHERE token = ?",
-    [refreshToken],
-    (err, row) => {
-      if (err || !row) {
-        return res.status(403).json({ error: "Refresh Token 무효" });
-      }
-
-      // 만료 확인
-      const now = new Date();
-      if (new Date(row.expires_at) < now) {
-        return res.status(403).json({ error: "Refresh Token 만료" });
-      }
-
-      // JWT 검증
-      jwt.verify(refreshToken, SECRET_KEY, (err, decoded) => {
-        if (err) return res.status(403).json({ error: "토큰 검증 실패" });
-
-        const { id, username, role } = decoded;
-        const newAccessToken = jwt.sign({ id, username, role }, SECRET_KEY, {
-          expiresIn: "15m",
-        });
-
-        return res.json({ token: newAccessToken });
-      });
+  findRefreshToken(refreshToken, (err, row) => {
+    if (err || !row) {
+      return res.status(403).json({ error: "Refresh Token 무효" });
     }
-  );
+
+    // 만료 확인
+    const now = new Date();
+    if (new Date(row.expires_at) < now) {
+      return res.status(403).json({ error: "Refresh Token 만료" });
+    }
+
+    // JWT 검증
+    jwt.verify(refreshToken, SECRET_KEY, (err, decoded) => {
+      if (err) return res.status(403).json({ error: "토큰 검증 실패" });
+
+      const { id, username, role } = decoded;
+      const newAccessToken = jwt.sign({ id, username, role }, SECRET_KEY, {
+        expiresIn: "15m",
+      });
+
+      return res.json({ token: newAccessToken });
+    });
+  });
 };
 
 module.exports = {
