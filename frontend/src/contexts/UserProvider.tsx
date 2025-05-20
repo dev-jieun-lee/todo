@@ -3,6 +3,9 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { UserContext } from "./Usercontext";
 import type { UserContextType, RoleType } from "./types";
+import { isTokenExpired } from "../contexts/useUser";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [username, setUsername] = useState("사용자");
@@ -45,16 +48,37 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem("auth");
   };
 
+  //앱 최초 로딩 시 토큰 만료 검사
   useEffect(() => {
     const stored = localStorage.getItem("auth");
     if (stored) {
       const { username, name, token, role } = JSON.parse(stored);
-      setUsername(username);
-      setName(name);
-      setToken(token);
-      setRole(role);
+
+      if (token && isTokenExpired(token)) {
+        console.warn("⏰ JWT 토큰 만료됨. 자동 로그아웃 처리.");
+        toast.info("로그인 세션이 만료되어 자동 로그아웃됩니다.");
+        logout();
+      } else {
+        setUsername(username);
+        setName(name);
+        setToken(token);
+        setRole(role);
+      }
     }
   }, []);
+
+  //로그인된 상태에서 주기적으로 만료 확인
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (token && isTokenExpired(token)) {
+        console.warn("⏰ 토큰이 만료되어 자동 로그아웃됩니다.");
+        toast.info("로그인 세션이 만료되어 자동 로그아웃됩니다.");
+        logout();
+      }
+    }, 60000); // 1분 간격으로 확인
+
+    return () => clearInterval(interval); // 언마운트 시 제거
+  }, [token]);
 
   return (
     <UserContext.Provider
