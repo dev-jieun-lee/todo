@@ -17,8 +17,11 @@ const findUserByUsername = (username, callback) => {
 const findAllUsers = (callback) => {
   db.all("SELECT id, username, name, role FROM users", [], callback);
 };
-
+function findUserById(id, callback) {
+  db.get("SELECT * FROM users WHERE id = ?", [id], callback);
+}
 module.exports = {
   findUserByUsername,
   findAllUsers,
+  findUserById,
 };

@@ -37,7 +37,7 @@ const handleDbError = (res, context, err, status = 500) => {
   const message = `❌ [${context}] DB 오류: ${err.message}`;
   console.error(message);
   writeLog("error", message);
-  return res.status(status).json({ error: `${context} 중 오류 발생` }); // 프론트가 기대하는 키로 유지
+  return res.status(status).json({ error: `${context} 중 오류 발생` });
 };
 
 // 일반 에러
@@ -65,10 +65,11 @@ const logEvent = (message) => {
 const logSystemAction = (req, user, action, detail) => {
   const ip = req.headers["x-forwarded-for"] || req.ip;
   const userAgent = req.headers["user-agent"] || "";
+
   const user_id = user?.id || null;
   const username = user?.username || "UNKNOWN";
 
-  const logMsg = `📝 [${action}] ${username} - ${detail}`;
+  const logMsg = `[${action}] - 사용자: ${username} - ${detail}`;
   console.log(logMsg);
 
   insertSystemLog(user_id, username, action, detail, ip, userAgent);

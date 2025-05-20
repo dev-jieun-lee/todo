@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   DashboardIcon,
   KpiIcon,
@@ -12,6 +12,7 @@ import {
 } from "./Icons";
 import { useUser } from "../contexts/useUser";
 import { checkAccess } from "../utils/checkAccess";
+import api from "../utils/axiosInstance";
 import type { RoleType } from "../contexts/types";
 // 메뉴 타입 정의
 type MenuItem = {
@@ -22,7 +23,6 @@ type MenuItem = {
   children?: MenuItem[];
   roles?: RoleType[];
 };
-
 // 전체 메뉴 정의
 const menuItems: MenuItem[] = [
   {
@@ -200,13 +200,24 @@ const menuItems: MenuItem[] = [
 
 const Sidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const { username, role } = useUser();
+
   const toggleMenu = (label: string) => {
     setOpenMenus((prev) =>
       prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label]
     );
+  };
+
+  const handleMenuClick = async (label: string, path: string) => {
+    try {
+      await api.post("/menu-access", { label, path });
+    } catch (err) {
+      console.warn("❗ 메뉴 접근 로그 실패:", err);
+    }
+    navigate(path);
   };
 
   const filterMenuItems = (items: MenuItem[]) =>
@@ -226,11 +237,13 @@ const Sidebar = () => {
     <aside className="w-64 bg-white h-screen border-r px-6 py-6 shadow-sm overflow-y-auto">
       <div className="text-xs text-gray-500 mb-2">환영합니다, {username}님</div>
 
-      <Link to="/" className="text-2xl font-bold mb-4 block">
+      <button
+        onClick={() => handleMenuClick("홈", "/")}
+        className="text-2xl font-bold mb-4 block text-left"
+      >
         그룹웨어
-      </Link>
+      </button>
 
-      {/* 🔍 메뉴 검색 */}
       <input
         type="text"
         placeholder="메뉴 검색..."
@@ -259,33 +272,33 @@ const Sidebar = () => {
               {openMenus.includes(item.label) && (
                 <div className="flex flex-col gap-2 pl-6 mt-1">
                   {item.children.map((child) => (
-                    <Link
+                    <button
                       key={child.path}
-                      to={child.path!}
-                      className={`text-sm hover:text-blue-600 ${
+                      onClick={() => handleMenuClick(child.label, child.path!)}
+                      className={`text-left text-sm hover:text-blue-600 ${
                         location.pathname.startsWith(child.path!)
                           ? "text-blue-600 font-medium"
                           : "text-gray-800"
                       }`}
                     >
                       {child.label}
-                    </Link>
+                    </button>
                   ))}
                 </div>
               )}
             </div>
           ) : (
-            <Link
+            <button
               key={item.path}
-              to={item.path!}
-              className={`text-sm font-medium hover:text-blue-600 ${
+              onClick={() => handleMenuClick(item.label, item.path!)}
+              className={`text-left text-sm font-medium hover:text-blue-600 ${
                 location.pathname.startsWith(item.path!)
                   ? "text-blue-600"
                   : "text-gray-800"
               }`}
             >
               {item.icon} {item.label}
-            </Link>
+            </button>
           )
         )}
       </nav>
