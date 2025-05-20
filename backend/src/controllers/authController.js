@@ -1,66 +1,68 @@
 require("dotenv").config();
-const { findUserByUsername } = require("../models/userModel");
-const { insertSystemLog } = require("../models/systemLogModel");
+const db = require("../config/db");
+const { findUserByUsername, findAllUsers } = require("../models/userModel");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 
-const SECRET_KEY = process.env.SECRET_KEY;
 const {
   saveRefreshToken,
   findRefreshToken,
   deleteRefreshToken,
 } = require("../models/refreshTokenModel");
 
+const {
+  handleDbError,
+  logEvent,
+  logWarning,
+  logError,
+  logSystemAction,
+} = require("../utils/handleError");
+
+const { LOG_ACTIONS, LOG_ACTION_LABELS } = require("../utils/logActions");
+
+const SECRET_KEY = process.env.SECRET_KEY;
+
 const login = (req, res) => {
   const { username, password } = req.body;
-
-  const ip =
-    req.headers["x-forwarded-for"] || req.connection.remoteAddress || req.ip;
-  const userAgent = req.headers["user-agent"] || "";
 
   try {
     findUserByUsername(username, (err, user) => {
       if (err) {
-        console.error("❌ DB 오류:", err);
-        insertSystemLog(
+        handleDbError(res, "로그인 - 사용자 조회", err);
+        logSystemAction(
+          req,
           null,
-          username,
-          "LOGIN_FAIL",
-          `DB 오류 - ${username}`,
-          ip,
-          userAgent
+          LOG_ACTIONS.LOGIN_FAIL,
+          `DB 오류 - ${username}`
         );
-        return res
-          .status(500)
-          .json({ error: "서버 내부 오류: 사용자 조회 실패" });
+        return;
       }
 
       if (!user) {
-        const detail = `존재하지 않는 사용자명`;
-        console.warn(`⚠️ 로그인 실패: ${detail} (${username})`);
-        insertSystemLog(null, username, "LOGIN_FAIL", detail, ip, userAgent);
+        logWarning(`로그인 실패: 존재하지 않는 사용자 (${username})`);
+        logSystemAction(
+          req,
+          null,
+          LOG_ACTIONS.LOGIN_FAIL,
+          LOG_ACTION_LABELS.LOGIN_FAIL
+        );
         return res.status(401).json({ error: "존재하지 않는 사용자명입니다." });
       }
 
-      // bcrypt.compare로 비밀번호 검증
       bcrypt.compare(password, user.password, (err, isMatch) => {
         if (err || !isMatch) {
-          const detail = `비밀번호 불일치`;
-          console.warn(`⚠️ 로그인 실패: ${detail} (${username})`);
-          insertSystemLog(
-            user.id,
-            username,
-            "LOGIN_FAIL",
-            detail,
-            ip,
-            userAgent
+          logWarning(`로그인 실패: 비밀번호 불일치 (${username})`);
+          logSystemAction(
+            req,
+            user,
+            LOG_ACTIONS.LOGIN_FAIL,
+            LOG_ACTION_LABELS.LOGIN_FAIL
           );
           return res
             .status(401)
             .json({ error: "비밀번호가 일치하지 않습니다." });
         }
 
-        // 로그인 성공
         const payload = {
           id: user.id,
           username: user.username,
@@ -71,29 +73,23 @@ const login = (req, res) => {
           expiresIn: "14d",
         });
 
-        insertSystemLog(
-          user.id,
-          username,
-          "LOGIN",
-          "로그인 성공",
-          ip,
-          userAgent
-        );
+        logSystemAction(req, user, LOG_ACTIONS.LOGIN, LOG_ACTION_LABELS.LOGIN);
+        logEvent(`로그인 성공: ${username} (ID: ${user.id})`);
 
-        // Refresh Token을 db에 저장
         const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
         saveRefreshToken(
           user.id,
           refreshToken,
           expiresAt.toISOString(),
           (err) => {
-            if (err) console.error("❌ Refresh Token 저장 실패");
+            if (err) logError("Refresh Token 저장", err);
+            else logEvent(`Refresh Token 저장 완료 (ID: ${user.id})`);
           }
         );
-        // Refresh Token을 HttpOnly 쿠키로 저장
+
         res.cookie("refreshToken", refreshToken, {
           httpOnly: true,
-          secure: false, // 내부망이라면 false, HTTPS면 true
+          secure: false,
           sameSite: "strict",
           maxAge: 14 * 24 * 60 * 60 * 1000,
         });
@@ -110,14 +106,12 @@ const login = (req, res) => {
       });
     });
   } catch (e) {
-    console.error("❌ 예기치 않은 서버 오류:", e);
-    insertSystemLog(
+    logError("로그인 예외", e);
+    logSystemAction(
+      req,
       null,
-      username,
-      "LOGIN_FAIL",
-      `서버 예외: ${e.message}`,
-      ip,
-      userAgent
+      LOG_ACTIONS.LOGIN_FAIL,
+      `서버 예외: ${e.message}`
     );
     return res
       .status(500)
@@ -129,18 +123,17 @@ const logout = (req, res) => {
   const refreshToken = req.cookies.refreshToken;
   if (refreshToken) {
     deleteRefreshToken(refreshToken, (err) => {
-      if (err) console.error("❌ 토큰 삭제 실패:", err.message);
-      else console.log("✅ 토큰 삭제 완료");
+      if (err) logError("토큰 삭제 실패", err);
+      else logEvent("✅ 토큰 삭제 완료");
     });
     res.clearCookie("refreshToken");
   }
 
-  const { id, username } = req.user;
-  const ip = req.headers["x-forwarded-for"] || req.ip;
-  const userAgent = req.headers["user-agent"] || "";
+  const id = req.user?.id || null;
+  const username = req.user?.username || "unknown";
 
-  insertSystemLog(id, username, "LOGOUT", "로그아웃", ip, userAgent);
-
+  logSystemAction(req, req.user, LOG_ACTIONS.LOGOUT, LOG_ACTION_LABELS.LOGOUT);
+  logEvent(`로그아웃 완료: ${username} (ID: ${id})`);
   return res.json({ message: "로그아웃 완료" });
 };
 
@@ -149,19 +142,14 @@ const refresh = (req, res) => {
   if (!refreshToken)
     return res.status(401).json({ error: "Refresh Token 없음" });
 
-  // DB에서 토큰 존재 여부 확인
   findRefreshToken(refreshToken, (err, row) => {
-    if (err || !row) {
+    if (err || !row)
       return res.status(403).json({ error: "Refresh Token 무효" });
-    }
 
-    // 만료 확인
-    const now = new Date();
-    if (new Date(row.expires_at) < now) {
+    if (new Date(row.expires_at) < new Date()) {
       return res.status(403).json({ error: "Refresh Token 만료" });
     }
 
-    // JWT 검증
     jwt.verify(refreshToken, SECRET_KEY, (err, decoded) => {
       if (err) return res.status(403).json({ error: "토큰 검증 실패" });
 
@@ -170,6 +158,12 @@ const refresh = (req, res) => {
         expiresIn: "15m",
       });
 
+      logSystemAction(
+        req,
+        { id, username },
+        LOG_ACTIONS.TOKEN_REFRESH,
+        LOG_ACTION_LABELS.TOKEN_REFRESH
+      );
       return res.json({ token: newAccessToken });
     });
   });

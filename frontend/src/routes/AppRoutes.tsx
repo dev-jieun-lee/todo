@@ -47,7 +47,7 @@ import AdminSettingsCategories from "../pages/Admin/Settings/Categories";
 import AdminSettingsCalendar from "../pages/Admin/Settings/Calendar";
 import AdminSettingsReset from "../pages/Admin/Settings/Reset";
 import AdminSettingsLogs from "../pages/Admin/Settings/Logs";
-
+import AdminSessionsPage from "../pages/Admin/Settings/Sessions";
 //에러
 import Error403 from "../pages/error/403";
 import Error404 from "../pages/error/404";
@@ -189,6 +189,7 @@ const AppRoutes = () => {
           <ProtectedRoute element={<AdminSettingsLogs />} requireAdmin={true} />
         }
       />
+      <Route path="/admin/sessions" element={<AdminSessionsPage />} />
 
       {/* 에러 */}
       <Route path="/error/403" element={<Error403 />} />

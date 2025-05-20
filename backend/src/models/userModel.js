@@ -2,7 +2,6 @@ const db = require("../config/db");
 
 const findUserByUsername = (username, callback) => {
   const query = `SELECT * FROM users WHERE username = ?`;
-
   db.get(query, [username], (err, row) => {
     if (err) {
       console.error(`❌ 사용자 조회 중 DB 오류 (username: ${username})`, err);
@@ -15,4 +14,11 @@ const findUserByUsername = (username, callback) => {
   });
 };
 
-module.exports = { findUserByUsername };
+const findAllUsers = (callback) => {
+  db.all("SELECT id, username, name, role FROM users", [], callback);
+};
+
+module.exports = {
+  findUserByUsername,
+  findAllUsers,
+};
