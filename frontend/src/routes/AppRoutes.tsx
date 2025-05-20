@@ -48,6 +48,10 @@ import AdminSettingsCalendar from "../pages/Admin/Settings/Calendar";
 import AdminSettingsReset from "../pages/Admin/Settings/Reset";
 import AdminSettingsLogs from "../pages/Admin/Settings/Logs";
 
+//에러
+import Error403 from "../pages/error/403";
+import Error404 from "../pages/error/404";
+
 const AppRoutes = () => {
   return (
     <Routes>
@@ -186,8 +190,11 @@ const AppRoutes = () => {
         }
       />
 
+      {/* 에러 */}
+      <Route path="/error/403" element={<Error403 />} />
+      <Route path="/error/404" element={<Error404 />} />
       {/* fallback */}
-      <Route path="*" element={<Navigate to="/" />} />
+      <Route path="*" element={<Navigate to="/error/404" />} />
     </Routes>
   );
 };
