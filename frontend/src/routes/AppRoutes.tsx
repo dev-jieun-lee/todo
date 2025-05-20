@@ -48,6 +48,10 @@ import AdminSettingsCalendar from "../pages/Admin/Settings/Calendar";
 import AdminSettingsReset from "../pages/Admin/Settings/Reset";
 import AdminSettingsLogs from "../pages/Admin/Settings/Logs";
 import AdminSessionsPage from "../pages/Admin/Sessions";
+
+//내정보
+import MyProfilePage from "../pages/profile";
+
 //에러
 import Error403 from "../pages/error/403";
 import Error404 from "../pages/error/404";
@@ -57,10 +61,8 @@ const AppRoutes = () => {
     <Routes>
       {/* 로그인 페이지는 누구나 접근 가능 */}
       <Route path="/login" element={<Login />} />
-
       {/* 진입페이지 (로그인 필요) */}
       <Route path="/" element={<ProtectedRoute element={<Home />} />} />
-
       {/* 기본 대시보드 */}
       <Route
         path="/dashboard/today"
@@ -78,7 +80,6 @@ const AppRoutes = () => {
         path="/dashboard/vacation"
         element={<ProtectedRoute element={<DashboardVacation />} />}
       />
-
       {/* KPI */}
       <Route path="/kpi/my" element={<ProtectedRoute element={<KpiMy />} />} />
       <Route
@@ -89,7 +90,6 @@ const AppRoutes = () => {
         path="/kpi/summary"
         element={<ProtectedRoute element={<KpiSummary />} />}
       />
-
       {/* 실행 관리 */}
       <Route
         path="/todo/my"
@@ -107,7 +107,6 @@ const AppRoutes = () => {
         path="/todo/history"
         element={<ProtectedRoute element={<TodoHistory />} />}
       />
-
       {/* 업무 게시판 */}
       <Route
         path="/board/free"
@@ -121,7 +120,6 @@ const AppRoutes = () => {
         path="/board/project"
         element={<ProtectedRoute element={<BoardProject />} />}
       />
-
       {/* 캘린더 */}
       <Route
         path="/calendar/team"
@@ -143,7 +141,6 @@ const AppRoutes = () => {
         path="/calendar/deadline"
         element={<ProtectedRoute element={<CalendarDeadline />} />}
       />
-
       {/* 공지 */}
       <Route
         path="/notice/global"
@@ -157,7 +154,6 @@ const AppRoutes = () => {
         path="/notice/suggestion"
         element={<ProtectedRoute element={<NoticeSuggestion />} />}
       />
-
       {/* 관리자 */}
       <Route
         path="/admin/users"
@@ -190,7 +186,8 @@ const AppRoutes = () => {
         }
       />
       <Route path="/admin/sessions" element={<AdminSessionsPage />} />
-
+      {/* 내정보 */}
+      <Route path="/profile" element={<MyProfilePage />} />
       {/* 에러 */}
       <Route path="/error/403" element={<Error403 />} />
       <Route path="/error/404" element={<Error404 />} />

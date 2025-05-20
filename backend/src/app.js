@@ -21,4 +21,6 @@ app.use((err, req, res, next) => {
 const mySessionRoutes = require("./routes/mySessionRoutes");
 app.use("/api/my-sessions", mySessionRoutes);
 
+const myProfileRoutes = require("./routes/myProfileRoutes");
+app.use("/api", myProfileRoutes);
 module.exports = app;

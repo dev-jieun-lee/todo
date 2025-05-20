@@ -15,6 +15,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [role, setRole] = useState<RoleType>("user");
 
   const login: UserContextType["login"] = ({ username, name, token, role }) => {
+    console.log("✅ [login] 전달된 값:", { username, name, token, role });
     setUsername(username);
     setName(name);
     setToken(token);
@@ -54,7 +55,12 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const stored = localStorage.getItem("auth");
     if (stored) {
       const { username, name, token, role } = JSON.parse(stored);
-
+      console.log("🗂️ [초기 로딩] localStorage auth 값:", {
+        username,
+        name,
+        token,
+        role,
+      });
       if (token && isTokenExpired(token)) {
         console.warn("⏰ JWT 토큰 만료됨. 자동 로그아웃 처리.");
         toast.info("로그인 세션이 만료되어 자동 로그아웃됩니다.");

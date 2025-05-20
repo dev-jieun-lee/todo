@@ -1,24 +1,41 @@
 import { useUser } from "../contexts/useUser";
 import { useNavigate } from "react-router-dom";
-import { Bell } from "lucide-react";
+import { Bell, UserCircle } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 const Header = () => {
   const { logout, username, role } = useUser();
   const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
 
+  // ✅ 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        menuOpen &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [menuOpen]);
+
   return (
-    <header className="w-full bg-white shadow px-6 py-3 flex justify-between items-center border-b">
-      {/* 좌측: 로고 */}
+    <header className="w-full bg-white shadow px-6 py-3 flex justify-between items-center border-b relative">
       <h1 className="text-xl font-bold text-gray-800">그룹웨어</h1>
 
-      {/* 우측: 알림 + 프로필 + 로그아웃 */}
-      <div className="flex items-center gap-6">
-        {/* 알림 아이콘 */}
+      <div className="flex items-center gap-6 relative">
         <button
           onClick={() => alert("알림 기능은 아직 미구현입니다.")}
           className="relative"
@@ -29,26 +46,38 @@ const Header = () => {
           </span>
         </button>
 
-        {/* 사용자 정보 */}
-        <div className="flex items-center gap-2">
-          {/* 프로필 이미지 (더미) */}
-          <img
-            src={`https://ui-avatars.com/api/?name=${username}&background=0D8ABC&color=fff&size=32`}
-            alt="프로필"
-            className="w-8 h-8 rounded-full"
-          />
-          <span className="text-sm text-gray-700">
-            {username} ({role})
-          </span>
-        </div>
+        {/* 사용자 프로필 + 드롭다운 */}
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => setMenuOpen((prev) => !prev)}
+            className="flex items-center gap-2 focus:outline-none"
+          >
+            <UserCircle className="w-8 h-8 text-gray-600" />
+            <span className="text-sm text-gray-700">
+              {username} ({role})
+            </span>
+          </button>
 
-        {/* 로그아웃 */}
-        <button
-          onClick={handleLogout}
-          className="text-sm text-red-500 hover:underline transition"
-        >
-          로그아웃
-        </button>
+          {menuOpen && (
+            <div className="absolute right-0 mt-2 w-40 bg-white shadow-lg rounded text-sm z-50 border">
+              <button
+                onClick={() => {
+                  navigate("/profile");
+                  setMenuOpen(false);
+                }}
+                className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+              >
+                내 정보
+              </button>
+              <button
+                onClick={handleLogout}
+                className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-red-500"
+              >
+                로그아웃
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
