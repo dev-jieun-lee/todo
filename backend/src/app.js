@@ -17,4 +17,8 @@ app.use((err, req, res, next) => {
   console.error("❗ 서버 예외:", err.message);
   res.status(500).json({ error: err.message || "서버 내부 오류" });
 });
+
+const mySessionRoutes = require("./routes/mySessionRoutes");
+app.use("/api/my-sessions", mySessionRoutes);
+
 module.exports = app;

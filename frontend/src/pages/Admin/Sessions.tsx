@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
-import api from "../../../utils/axiosInstance";
+import api from "../../utils/axiosInstance";
 import { toast } from "react-toastify";
-import { Card, CardContent } from "../../../components/ui/card";
-import { Button } from "../../../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
 import {
   Table,
   TableHeader,
   TableRow,
   TableCell,
   TableBody,
-} from "../../../components/ui/table";
+} from "../../components/ui/table";
 
 interface SessionInfo {
   user: {

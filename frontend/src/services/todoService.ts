@@ -1,10 +1,12 @@
 import api from "../utils/axiosInstance";
 
-const API_BASE = "/todos"; // 앞에 /api는 axiosInstance에 baseURL로 들어감
+const API_BASE = "/api/todos";
 
 export const getTodos = async () => {
   const res = await api.get(API_BASE);
-  return res.data;
+  const data = res.data;
+  console.log("getTodos 응답:", data);
+  return Array.isArray(data) ? data : [];
 };
 
 export const createTodo = async (title: string) => {

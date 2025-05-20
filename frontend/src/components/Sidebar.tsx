@@ -161,6 +161,11 @@ const menuItems: MenuItem[] = [
         path: "/admin/vacations",
         label: "휴가 승인 / 계정 잠금",
       },
+      {
+        id: "admin-sessions",
+        path: "/admin/sessions",
+        label: "사용자 세션 관리",
+      },
     ],
   },
   {

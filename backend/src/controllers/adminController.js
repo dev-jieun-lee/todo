@@ -10,7 +10,7 @@ const {
 } = require("../utils/handleError");
 const { LOG_ACTIONS, LOG_ACTION_LABELS } = require("../utils/logActions");
 
-// ✅ 강제 로그아웃 함수
+// 강제 로그아웃 함수
 exports.forceLogout = (req, res) => {
   const { user_id } = req.body;
 
@@ -53,7 +53,7 @@ exports.forceLogout = (req, res) => {
   });
 };
 
-// ✅ 전체 사용자 세션 조회 함수
+// 전체 사용자 세션 조회 함수
 exports.getActiveSessions = (req, res) => {
   findAllUsers((err, users) => {
     if (err) return handleDbError(res, "세션 사용자 조회", err);

@@ -1,12 +1,23 @@
-import api from "axios";
+import axios from "axios";
 import { getAccessToken, updateTokenEverywhere } from "./tokenManager";
+import { logEvent } from "./logger"; // logEvent는 콘솔 기반 또는 파일 로그 함수
 
+// axios 인스턴스 생성
+const api = axios.create({
+  baseURL: "/api", // 모든 요청에 자동으로 /api 접두사 추가
+  withCredentials: true,
+});
+
+// 요청 인터셉터: Authorization 헤더 설정
 api.interceptors.request.use((config) => {
   const token = getAccessToken();
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 });
 
+// 응답 인터셉터: 401 → 토큰 재발급 → 요청 재시도
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
@@ -20,25 +31,24 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const res = await api.post(
-          "/api/refresh",
-          {},
-          { withCredentials: true }
-        );
+        logEvent("🔄 Access Token 재발급 시도");
+        const res = await api.post("/refresh", {}, { withCredentials: true });
         const newToken = res.data.token;
 
-        updateTokenEverywhere(newToken); // 모든 상태에 토큰 반영
+        updateTokenEverywhere(newToken); // 저장소 갱신
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
-        return api(originalRequest);
+
+        logEvent("Access Token 재발급 성공");
+        return api(originalRequest); // 원래 요청 재시도
       } catch (err) {
-        console.error("❌ 토큰 재발급 실패:", err);
-        // Refresh Token 만료 시 → 로그아웃 처리
+        logEvent(`❌ Access Token 재발급 실패: ${String(err)}`);
         localStorage.removeItem("auth");
-        window.location.href = "/login"; // 또는 navigate("/login")
+        window.location.href = "/login";
       }
     }
 
-    return Promise.reject(error);
+    return Promise.reject(error); // 다른 에러는 그대로 반환
   }
 );
+
 export default api;

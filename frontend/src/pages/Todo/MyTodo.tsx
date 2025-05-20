@@ -17,9 +17,17 @@ const TodoPage = () => {
   const [todos, setTodos] = useState<TodoItem[]>([]);
   const [input, setInput] = useState("");
   const navigate = useNavigate();
+
   const loadTodos = async () => {
     const data = await getTodos();
-    setTodos(data);
+
+    // 응답이 배열인지 확인해서 안전하게 처리
+    if (Array.isArray(data)) {
+      setTodos(data);
+    } else {
+      console.warn("🚨 getTodos 응답이 배열이 아닙니다:", data);
+      setTodos([]); // fallback 처리
+    }
   };
 
   useEffect(() => {

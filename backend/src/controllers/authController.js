@@ -124,7 +124,7 @@ const logout = (req, res) => {
   if (refreshToken) {
     deleteRefreshToken(refreshToken, (err) => {
       if (err) logError("토큰 삭제 실패", err);
-      else logEvent("✅ 토큰 삭제 완료");
+      else logEvent("토큰 삭제 완료");
     });
     res.clearCookie("refreshToken");
   }
