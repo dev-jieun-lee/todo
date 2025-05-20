@@ -17,8 +17,8 @@ const TodoHistory = () => {
     axios
       .get("http://localhost:4000/api/todos/history/all?user_id=userA")
       .then((res) => {
-        console.log("✅ 불러온 이력:", res.data); // 👉 여기로 먼저 확인
-        setHistory(res.data); // ✅ 실제 상태 반영
+        console.log("불러온 이력:", res.data); // 👉 여기로 먼저 확인
+        setHistory(res.data); // 실제 상태 반영
       });
   }, []);
 

@@ -15,7 +15,7 @@ const Login = () => {
 
       const { token, user } = res.data; // 🔑 서버에서 token과 user 정보 반환
 
-      // ✅ Context에도 저장
+      // Context에도 저장
 
       login({
         token,

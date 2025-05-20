@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { login, logout } = require("../controllers/authController");
+const { login, logout, refresh } = require("../controllers/authController");
 const authenticateToken = require("../middlewares/authMiddleware");
 
 // 로그인
@@ -13,5 +13,7 @@ router.get("/me", authenticateToken, (req, res) => {
 
 //로그아웃
 router.post("/logout", authenticateToken, logout);
+
+router.post("/refresh", refresh);
 
 module.exports = router;

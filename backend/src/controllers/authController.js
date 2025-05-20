@@ -2,7 +2,7 @@ require("dotenv").config();
 const { findUserByUsername } = require("../models/userModel");
 const { insertSystemLog } = require("../models/systemLogModel");
 const jwt = require("jsonwebtoken");
-const bcrypt = require("bcrypt"); // ✅ bcrypt 추가
+const bcrypt = require("bcrypt");
 
 const SECRET_KEY = process.env.SECRET_KEY;
 
@@ -37,7 +37,7 @@ const login = (req, res) => {
         return res.status(401).json({ error: "존재하지 않는 사용자명입니다." });
       }
 
-      // ✅ bcrypt.compare로 비밀번호 검증
+      // bcrypt.compare로 비밀번호 검증
       bcrypt.compare(password, user.password, (err, isMatch) => {
         if (err || !isMatch) {
           const detail = `비밀번호 불일치`;
@@ -55,14 +55,18 @@ const login = (req, res) => {
             .json({ error: "비밀번호가 일치하지 않습니다." });
         }
 
-        // ✅ 로그인 성공
+        // 로그인 성공
         const payload = {
           id: user.id,
           username: user.username,
           role: user.role,
         };
 
-        const token = jwt.sign(payload, SECRET_KEY, { expiresIn: "2h" });
+        const accessToken = jwt.sign(payload, SECRET_KEY, { expiresIn: "15m" }); // ⏱ 짧은 Access
+        const refreshToken = jwt.sign(payload, SECRET_KEY, {
+          expiresIn: "14d",
+        }); // 긴 Refresh
+
         insertSystemLog(
           user.id,
           username,
@@ -72,8 +76,31 @@ const login = (req, res) => {
           userAgent
         );
 
+        // Refresh Token을 db에 저장
+        const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14일
+
+        db.run(
+          "INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, ?, ?)",
+          [user.id, refreshToken, expiresAt.toISOString()],
+          (err) => {
+            if (err) {
+              console.error("❌ Refresh Token 저장 실패:", err.message);
+            } else {
+              console.log("✅ Refresh Token 저장 완료");
+            }
+          }
+        );
+
+        // Refresh Token을 HttpOnly 쿠키로 저장
+        res.cookie("refreshToken", refreshToken, {
+          httpOnly: true,
+          secure: false, // 내부망이라면 false, HTTPS면 true
+          sameSite: "strict",
+          maxAge: 14 * 24 * 60 * 60 * 1000,
+        });
+
         return res.json({
-          token,
+          token: accessToken,
           user: {
             id: user.id,
             username: user.username,
@@ -100,6 +127,12 @@ const login = (req, res) => {
 };
 
 const logout = (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
+  if (refreshToken) {
+    db.run("DELETE FROM refresh_tokens WHERE token = ?", [refreshToken]);
+    res.clearCookie("refreshToken");
+  }
+
   const { id, username } = req.user;
   const ip = req.headers["x-forwarded-for"] || req.ip;
   const userAgent = req.headers["user-agent"] || "";
@@ -109,4 +142,43 @@ const logout = (req, res) => {
   return res.json({ message: "로그아웃 완료" });
 };
 
-module.exports = { login, logout };
+const refresh = (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken)
+    return res.status(401).json({ error: "Refresh Token 없음" });
+
+  // DB에서 토큰 존재 여부 확인
+  db.get(
+    "SELECT * FROM refresh_tokens WHERE token = ?",
+    [refreshToken],
+    (err, row) => {
+      if (err || !row) {
+        return res.status(403).json({ error: "Refresh Token 무효" });
+      }
+
+      // 만료 확인
+      const now = new Date();
+      if (new Date(row.expires_at) < now) {
+        return res.status(403).json({ error: "Refresh Token 만료" });
+      }
+
+      // JWT 검증
+      jwt.verify(refreshToken, SECRET_KEY, (err, decoded) => {
+        if (err) return res.status(403).json({ error: "토큰 검증 실패" });
+
+        const { id, username, role } = decoded;
+        const newAccessToken = jwt.sign({ id, username, role }, SECRET_KEY, {
+          expiresIn: "15m",
+        });
+
+        return res.json({ token: newAccessToken });
+      });
+    }
+  );
+};
+
+module.exports = {
+  login,
+  logout,
+  refresh,
+};

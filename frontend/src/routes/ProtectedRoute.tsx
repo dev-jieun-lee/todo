@@ -18,7 +18,7 @@ const ProtectedRoute = ({
     return <Navigate to="/error/403" />;
   }
 
-  return element; // ✅ 이거 빠졌었음
+  return element;
 };
 
 export default ProtectedRoute;

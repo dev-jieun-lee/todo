@@ -6,6 +6,7 @@ import type { UserContextType, RoleType } from "./types";
 import { isTokenExpired } from "../contexts/useUser";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { setUpdateTokenFunction } from "../utils/tokenManager";
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [username, setUsername] = useState("사용자");
@@ -80,9 +81,23 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     return () => clearInterval(interval); // 언마운트 시 제거
   }, [token]);
 
+  const updateToken = (newToken: string) => {
+    setToken(newToken);
+
+    const stored = localStorage.getItem("auth");
+    if (stored) {
+      const auth = JSON.parse(stored);
+      auth.token = newToken;
+      localStorage.setItem("auth", JSON.stringify(auth));
+    }
+  };
+  useEffect(() => {
+    setUpdateTokenFunction(updateToken);
+  }, []);
+
   return (
     <UserContext.Provider
-      value={{ username, name, token, role, login, logout }}
+      value={{ username, name, token, role, login, logout, updateToken }}
     >
       {children}
     </UserContext.Provider>
