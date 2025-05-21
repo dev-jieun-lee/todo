@@ -143,10 +143,10 @@ CREATE TABLE IF NOT EXISTS system_logs (
 );
 
 --토큰테이블
-CREATE TABLE IF NOT EXISTS refresh_tokens (
+CREATE TABLE refresh_tokens (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL,
   token TEXT NOT NULL,
   expires_at DATETIME NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at DATETIME NOT NULL -- DEFAULT 제거
 );

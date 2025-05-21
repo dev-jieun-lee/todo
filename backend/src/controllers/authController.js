@@ -76,11 +76,28 @@ const login = (req, res) => {
         logSystemAction(req, user, LOG_ACTIONS.LOGIN, LOG_ACTION_LABELS.LOGIN);
         logEvent(`로그인 성공: ${username} (ID: ${user.id})`);
 
-        const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+        // 1. 14일 + KST 오프셋 9시간 더하기
+        const offsetKST = 9 * 60 * 60 * 1000; // 9시간 = 32400000ms
+        const now = Date.now();
+        const expiresAt = new Date(now + 14 * 24 * 60 * 60 * 1000 + offsetKST);
+        const createdAt = new Date(now + offsetKST);
+
+        // 2. KST 형식으로 문자열 변환 (SQLite DATETIME 형식 맞춤)
+        const expiresAtKST = expiresAt
+          .toISOString()
+          .replace("T", " ")
+          .slice(0, 19);
+        const createdAtKST = createdAt
+          .toISOString()
+          .replace("T", " ")
+          .slice(0, 19);
+
+        // 3. 저장 (createdAt 인자 추가됨!)
         saveRefreshToken(
           user.id,
           refreshToken,
-          expiresAt.toISOString(),
+          expiresAtKST,
+          createdAtKST,
           (err) => {
             if (err) logError("Refresh Token 저장", err);
             else logEvent(`Refresh Token 저장 완료 (ID: ${user.id})`);

@@ -1,9 +1,9 @@
 const db = require("../config/db");
 
-exports.saveRefreshToken = (userId, token, expiresAt, callback) => {
+exports.saveRefreshToken = (userId, token, expiresAt, createdAt, callback) => {
   db.run(
-    `INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, ?, ?)`,
-    [userId, token, expiresAt],
+    `INSERT INTO refresh_tokens (user_id, token, expires_at, created_at) VALUES (?, ?, ?, ?)`,
+    [userId, token, expiresAt, createdAt],
     callback
   );
 };
