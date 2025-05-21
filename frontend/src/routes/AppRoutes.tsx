@@ -185,9 +185,17 @@ const AppRoutes = () => {
           <ProtectedRoute element={<AdminSettingsLogs />} requireAdmin={true} />
         }
       />
-      <Route path="/admin/sessions" element={<AdminSessionsPage />} />
+      <Route
+        path="/admin/sessions"
+        element={
+          <ProtectedRoute element={<AdminSessionsPage />} requireAdmin={true} />
+        }
+      />
       {/* 내정보 */}
-      <Route path="/profile" element={<MyProfilePage />} />
+      <Route
+        path="/profile"
+        element={<ProtectedRoute element={<MyProfilePage />} />}
+      />
       {/* 에러 */}
       <Route path="/error/403" element={<Error403 />} />
       <Route path="/error/404" element={<Error404 />} />

@@ -120,6 +120,7 @@ const login = (req, res) => {
 };
 
 const logout = (req, res) => {
+  console.log("🧪 [서버] 받은 쿠키:", req.cookies);
   const refreshToken = req.cookies.refreshToken;
 
   if (refreshToken) {

@@ -1,9 +1,14 @@
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
-
 const app = express();
 app.set("trust proxy", true);
+app.use(
+  cors({
+    origin: "http://localhost:5173", // 프론트 주소
+    credentials: true, // 쿠키 허용
+  })
+);
 
 // 미들웨어
 app.use(cors());

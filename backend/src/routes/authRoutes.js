@@ -12,7 +12,7 @@ router.get("/me", authenticateToken, (req, res) => {
 });
 
 //로그아웃
-router.post("/logout", authenticateToken, logout);
+router.post("/logout", logout);
 
 router.post("/refresh", refresh);
 

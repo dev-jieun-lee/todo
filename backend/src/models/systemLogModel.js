@@ -32,7 +32,7 @@ const insertSystemLog = (user_id, username, action, detail, ip, userAgent) => {
         });
         console.error("에러 메시지:", err.message);
       } else {
-        console.log("시스템 로그 저장 완료 (log_id:", this.lastID, ")");
+        //console.log("시스템 로그 저장 완료 (log_id:", this.lastID, ")");
       }
     }
   );
