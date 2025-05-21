@@ -68,7 +68,7 @@ const login = (req, res) => {
           username: user.username,
           role: user.role,
         };
-        const accessToken = jwt.sign(payload, SECRET_KEY, { expiresIn: "15m" });
+        const accessToken = jwt.sign(payload, SECRET_KEY, { expiresIn: "30m" });
         const refreshToken = jwt.sign(payload, SECRET_KEY, {
           expiresIn: "14d",
         });
