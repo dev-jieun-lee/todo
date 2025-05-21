@@ -121,6 +121,7 @@ const login = (req, res) => {
 
 const logout = (req, res) => {
   const refreshToken = req.cookies.refreshToken;
+
   if (refreshToken) {
     deleteRefreshToken(refreshToken, (err) => {
       if (err) logError("토큰 삭제 실패", err);
@@ -129,11 +130,18 @@ const logout = (req, res) => {
     res.clearCookie("refreshToken");
   }
 
+  // Access Token이 만료되어 req.user가 undefined일 수 있음
   const id = req.user?.id || null;
   const username = req.user?.username || "unknown";
 
-  logSystemAction(req, req.user, LOG_ACTIONS.LOGOUT, LOG_ACTION_LABELS.LOGOUT);
-  logEvent(`로그아웃 완료: ${username} (ID: ${id})`);
+  logSystemAction(
+    req,
+    req.user ?? null,
+    LOG_ACTIONS.LOGOUT,
+    LOG_ACTION_LABELS.LOGOUT
+  );
+  logEvent(`로그아웃 완료: ${username} (ID: ${id ?? "?"})`);
+
   return res.json({ message: "로그아웃 완료" });
 };
 

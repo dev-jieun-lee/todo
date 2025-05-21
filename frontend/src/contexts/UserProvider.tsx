@@ -28,17 +28,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     try {
-      const stored = localStorage.getItem("auth");
-      const token = stored ? JSON.parse(stored).token : null;
-
-      if (token) {
-        await fetch("/api/logout", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-      }
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include", // ✅ 쿠키(Refresh Token) 포함
+      });
     } catch (err) {
       console.warn("❗ 서버 로그아웃 기록 실패:", err);
     }
