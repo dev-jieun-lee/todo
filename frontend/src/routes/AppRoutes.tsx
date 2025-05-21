@@ -51,6 +51,7 @@ import AdminSessionsPage from "../pages/Admin/Sessions";
 
 //내정보
 import MyProfilePage from "../pages/profile";
+import MySessionsPage from "../pages/profile/sessions";
 
 //에러
 import Error403 from "../pages/error/403";
@@ -195,6 +196,10 @@ const AppRoutes = () => {
       <Route
         path="/profile"
         element={<ProtectedRoute element={<MyProfilePage />} />}
+      />
+      <Route
+        path="/profile/sessions"
+        element={<ProtectedRoute element={<MySessionsPage />} />}
       />
       {/* 에러 */}
       <Route path="/error/403" element={<Error403 />} />

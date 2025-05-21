@@ -52,7 +52,22 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
         logEvent("✅ Access Token 재발급 성공 → 요청 재시도");
 
-        return api(originalRequest);
+        return api(originalRequest).catch((err) => {
+          logEvent(
+            `❗ 재요청 실패: ${err?.response?.status} - ${
+              err?.response?.data?.error || err.message
+            }`
+          );
+          toast.error(
+            `(${err?.response?.status}) ${
+              err?.response?.data?.error ||
+              "세션이 만료되었거나 접근 권한이 없습니다."
+            }`
+          );
+          localStorage.removeItem("auth");
+          window.location.href = "/login";
+          throw err;
+        });
       } catch (err) {
         logEvent(`❌ Access Token 재발급 실패: ${String(err)}`);
         localStorage.removeItem("auth");

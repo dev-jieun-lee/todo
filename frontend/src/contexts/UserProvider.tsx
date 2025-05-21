@@ -6,7 +6,7 @@ import type { UserContextType, RoleType } from "./types";
 import { isTokenExpired } from "../contexts/useUser";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { setUpdateTokenFunction } from "../utils/tokenManager";
+import { setAccessToken, setUpdateTokenFunction } from "../utils/tokenManager";
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [username, setUsername] = useState("사용자");
@@ -48,6 +48,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const stored = localStorage.getItem("auth");
     if (stored) {
       const { username, name, token, role } = JSON.parse(stored);
+      if (token) {
+        setAccessToken(token); // ✅ axiosInstance용으로 메모리에 넣기
+      }
       console.log("🗂️ [초기 로딩] localStorage auth 값:", {
         username,
         name,

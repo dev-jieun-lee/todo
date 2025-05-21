@@ -88,7 +88,7 @@ const MySessionsPage = () => {
           >
             <div>
               <div className="font-semibold text-sm">
-                {s.user_agent.slice(0, 80)}
+                {s.user_agent ? s.user_agent.slice(0, 80) : "(알 수 없음)"}
               </div>
               <div className="text-xs text-gray-500">
                 {s.created_at}

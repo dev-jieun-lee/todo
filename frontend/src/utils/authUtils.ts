@@ -36,11 +36,15 @@ export const getTokenRemainingTime = (): number | null => {
 /**
  * 토큰이 만료되었는지 여부
  */
-export const isTokenExpired = (): boolean => {
-  const remaining = getTokenRemainingTime();
-  return remaining === null || remaining <= 0;
+export const isTokenExpired = (token: string): boolean => {
+  try {
+    const { exp } = jwtDecode<{ exp: number }>(token);
+    const now = Math.floor(Date.now() / 1000);
+    return exp < now;
+  } catch {
+    return true;
+  }
 };
-
 /**
  * 토큰 만료 시각 (Date 객체 반환)
  */
