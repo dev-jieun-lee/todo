@@ -2,6 +2,7 @@ import { useUser } from "../contexts/useUser";
 import { useNavigate } from "react-router-dom";
 import { Bell, UserCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import SessionTimer from "../components/SessionTimer";
 
 const Header = () => {
   const { logout, username, role } = useUser();
@@ -45,7 +46,9 @@ const Header = () => {
             3
           </span>
         </button>
-
+        <div className="header-right">
+          <SessionTimer />
+        </div>
         {/* 사용자 프로필 + 드롭다운 */}
         <div className="relative" ref={dropdownRef}>
           <button

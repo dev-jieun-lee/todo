@@ -1,4 +1,4 @@
-// src/utils/tokenManager.ts
+// 토큰 저장/동기화 담당
 
 let accessToken: string | null = null;
 
