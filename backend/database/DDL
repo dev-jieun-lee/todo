@@ -150,3 +150,17 @@ CREATE TABLE refresh_tokens (
   expires_at DATETIME NOT NULL,
   created_at DATETIME NOT NULL -- DEFAULT 제거
 );
+
+--메뉴테이블
+CREATE TABLE IF NOT EXISTS menus (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  parent_id INTEGER,
+  label TEXT NOT NULL,
+  path TEXT,                 -- 실제 라우트 경로 (없으면 group 헤더로 처리)
+  icon TEXT,                 -- DashboardIcon 등
+    roles TEXT, -- JSON 문자열 (예: '["ADMIN","USER"]')
+  visibility TEXT DEFAULT 'visible', -- visible / hidden / dev-only 등
+  type TEXT DEFAULT 'link', -- link / group / divider / external 등
+  description TEXT,          -- 마우스 오버 도움말 등
+  sort_order INTEGER DEFAULT 0
+);
