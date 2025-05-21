@@ -3,7 +3,7 @@ const db = require("../config/db");
 const { findUserByUsername, findAllUsers } = require("../models/userModel");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-
+const { formatToKstString, getKstDate } = require("../utils/time");
 const {
   saveRefreshToken,
   findRefreshToken,
@@ -76,21 +76,11 @@ const login = (req, res) => {
         logSystemAction(req, user, LOG_ACTIONS.LOGIN, LOG_ACTION_LABELS.LOGIN);
         logEvent(`로그인 성공: ${username} (ID: ${user.id})`);
 
-        // 1. 14일 + KST 오프셋 9시간 더하기
-        const offsetKST = 9 * 60 * 60 * 1000; // 9시간 = 32400000ms
-        const now = Date.now();
-        const expiresAt = new Date(now + 14 * 24 * 60 * 60 * 1000 + offsetKST);
-        const createdAt = new Date(now + offsetKST);
-
-        // 2. KST 형식으로 문자열 변환 (SQLite DATETIME 형식 맞춤)
-        const expiresAtKST = expiresAt
-          .toISOString()
-          .replace("T", " ")
-          .slice(0, 19);
-        const createdAtKST = createdAt
-          .toISOString()
-          .replace("T", " ")
-          .slice(0, 19);
+        const now = new Date();
+        const expiresAtKST = formatToKstString(
+          new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)
+        );
+        const createdAtKST = formatToKstString(now);
 
         // 3. 저장 (createdAt 인자 추가됨!)
         saveRefreshToken(

@@ -1,4 +1,5 @@
 const db = require("../config/db");
+const { formatToKstString } = require("../utils/time");
 
 /**
  * 시스템 로그 삽입 함수
@@ -10,14 +11,15 @@ const db = require("../config/db");
  * @param {string} userAgent - 클라이언트 브라우저 정보
  */
 const insertSystemLog = (user_id, username, action, detail, ip, userAgent) => {
+  const createdAt = formatToKstString();
   const query = `
-    INSERT INTO system_logs (user_id, username, action, detail, ip, user_agent)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO system_logs (user_id, username, action, detail, ip, user_agent, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `;
 
   db.run(
     query,
-    [user_id, username, action, detail, ip, userAgent],
+    [user_id, username, action, detail, ip, userAgent, createdAt],
     function (err) {
       if (err) {
         console.error("❌ 시스템 로그 저장 실패:");
@@ -29,10 +31,11 @@ const insertSystemLog = (user_id, username, action, detail, ip, userAgent) => {
           detail,
           ip,
           userAgent,
+          createdAt,
         });
         console.error("에러 메시지:", err.message);
       } else {
-        //console.log("시스템 로그 저장 완료 (log_id:", this.lastID, ")");
+        // console.log("✅ 시스템 로그 저장 완료 (log_id:", this.lastID, ")");
       }
     }
   );
