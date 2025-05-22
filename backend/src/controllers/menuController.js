@@ -26,8 +26,8 @@ const buildMenuTree = (flatMenus) => {
       }
     }
   }
-  console.log("🧪 최종 트리 구조:");
-  console.dir(tree, { depth: null });
+  //console.log("🧪 최종 트리 구조:");
+  //console.dir(tree, { depth: null });
   return tree;
 };
 
@@ -40,14 +40,14 @@ exports.getMenus = (req, res) => {
       console.error("❌ 메뉴 조회 실패:", err.message);
       return res.status(500).json({ error: "메뉴 조회 실패" });
     }
-    console.log("📊 menus 응답 데이터 수:", rows.length);
-    console.table(
-      rows.map((r) => ({
-        id: r.id,
-        label: r.label,
-        parent: r.parent_id,
-      }))
-    );
+    // console.log("📊 menus 응답 데이터 수:", rows.length);
+    // console.table(
+    //   rows.map((r) => ({
+    //     id: r.id,
+    //     label: r.label,
+    //     parent: r.parent_id,
+    //   }))
+    // );
     const tree = buildMenuTree(rows);
     res.json(tree);
   });

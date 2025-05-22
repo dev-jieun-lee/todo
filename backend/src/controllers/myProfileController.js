@@ -16,7 +16,14 @@ exports.getMyProfile = (req, res) => {
 
   const query = `
   SELECT
-    u.username, u.name, u.email, u.role, u.hire_date, u.leave_date, u.status,
+    u.username,
+    u.name,
+    u.email,
+    u.role,
+    u.employee_number,
+    u.hire_date,
+    u.leave_date,
+    u.status,
     d.label AS department,
     p.label AS position,
     t.label AS team,
@@ -50,5 +57,25 @@ exports.getMyProfile = (req, res) => {
     logSystemAction(req, userInfo, "PROFILE_VIEW", "내 정보 조회 수행");
 
     res.json(row);
+  });
+};
+
+exports.getLeaveSummary = (req, res) => {
+  const userId = req.user.id;
+
+  const sql = `
+    SELECT
+      (SELECT COUNT(*) FROM vacations WHERE user_id = ? AND status = '승인') AS usedCount,
+      '2025-12-31' AS expireDate,  -- 예시값
+      15 - (SELECT COUNT(*) FROM vacations WHERE user_id = ? AND status = '승인') AS remaining
+  `;
+
+  db.get(sql, [userId, userId], (err, row) => {
+    if (err) return res.status(500).json({ error: "요약 조회 실패" });
+    res.json({
+      remaining: row.remaining,
+      usedThisMonth: row.usedCount, // 여기선 단순 total 사용, 월별은 추후 추가
+      expireDate: row.expireDate,
+    });
   });
 };

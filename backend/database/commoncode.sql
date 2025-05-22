@@ -69,14 +69,15 @@ INSERT INTO common_codes (code_group, code, label, sort_order, active) VALUES
 
 -- VACATION_TYPE with DESC
 INSERT INTO common_codes (code_group, code, label, sort_order, active) VALUES
-('VACATION_TYPE', 'DESC', '휴가 유형 코드: 휴가의 종류를 정의', 0, 0),
 ('VACATION_TYPE', 'ANNUAL', '연차', 1, 1),
 ('VACATION_TYPE', 'HALF', '반차', 2, 1),
 ('VACATION_TYPE', 'SICK', '병가', 3, 1),
 ('VACATION_TYPE', 'PARENTING', '육아휴직', 4, 1),
 ('VACATION_TYPE', 'SABBATICAL', '안식휴가', 5, 1),
 ('VACATION_TYPE', 'UNPAID', '무급휴직', 6, 1),
-('VACATION_TYPE', 'ETC', '기타', 7, 1);
+('VACATION_TYPE', 'TIME_SHIFT', '시차', 7, 1),
+('VACATION_TYPE', 'ETC', '기타', 8, 1);
+
 
 -- NOTICE_TARGET with DESC
 INSERT INTO common_codes (code_group, code, label, sort_order, active) VALUES

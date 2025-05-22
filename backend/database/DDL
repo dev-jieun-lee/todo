@@ -64,14 +64,14 @@ CREATE TABLE IF NOT EXISTS kpi_records (
 
 -- 휴가 신청 테이블
 CREATE TABLE IF NOT EXISTS vacations (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,         -- 휴가 ID
-  user_id INTEGER,                              -- 신청자 (users.id)
-  type TEXT,                                    -- 휴가 유형 (연차, 반차 등)
-  start_date TEXT,                              -- 시작일
-  end_date TEXT,                                -- 종료일
-  status TEXT DEFAULT '대기',                   -- 상태: 대기, 승인, 반려
-  reason TEXT,                                  -- 사유
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,-- 생성일
+  id INTEGER PRIMARY KEY AUTOINCREMENT,          -- 휴가 ID
+  user_id INTEGER,                               -- 신청자 (users.id)
+  type_code TEXT,                                -- 공통 코드 ex: 'ANNUAL', 'HALF', ...
+  start_date TEXT,                               -- 시작일
+  end_date TEXT,                                 -- 종료일
+  status TEXT DEFAULT '대기',                    -- 상태: 대기, 승인, 반려
+  reason TEXT,                                   -- 신청 사유
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP, -- 생성일
   FOREIGN KEY(user_id) REFERENCES users(id)
 );
 

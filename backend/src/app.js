@@ -23,6 +23,8 @@ const mySessionRoutes = require("./routes/mySessionRoutes");
 const myProfileRoutes = require("./routes/myProfileRoutes");
 const logRoutes = require("./routes/logRoutes");
 const menuRoutes = require("./routes/menuRoutes");
+const vacationRoutes = require("./routes/vacationRoutes");
+const commonCodeRoutes = require("./routes/commonCodeRoutes");
 
 // 📌 실제 API 라우팅 등록
 app.use("/api/todos", todoRoutes); // /api/todos/*
@@ -32,6 +34,8 @@ app.use("/api/my-sessions", mySessionRoutes); // /api/my-sessions/*
 app.use("/api/profile", myProfileRoutes); // /api/profile/details 등
 app.use("/api/log", logRoutes); // /api/log/menu-access 등
 app.use("/api/menus", menuRoutes);
+app.use("/api/vacations", vacationRoutes);
+app.use("/api/common-codes", commonCodeRoutes);
 
 // ❗ 공통 에러 핸들링
 app.use((err, req, res, next) => {

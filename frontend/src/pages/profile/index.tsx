@@ -3,7 +3,10 @@ import api from "../../utils/axiosInstance";
 import { handleApiError } from "../../utils/handleErrorFront";
 import { UserCircle, Lock, Mail, Clock } from "lucide-react";
 import { Button } from "../../components/ui/button";
-
+import LeaveSummaryCard from "./LeaveSummaryCard";
+import ScheduleSummaryCard from "./ScheduleSummaryCard";
+import KpiSummaryCard from "./KpiSummaryCard";
+import SecurityLogCard from "./SecurityLogCard";
 interface Profile {
   username: string;
   name: string;
@@ -42,7 +45,7 @@ export default function MyProfilePage() {
         ❌ 내 정보를 불러오지 못했습니다.
       </div>
     );
-
+  console.log(profile);
   return (
     <div className="max-w-2xl mx-auto p-6">
       {/* 상단 요약 카드 */}
@@ -121,6 +124,15 @@ export default function MyProfilePage() {
             <Mail className="w-4 h-4" /> 정보 수정 요청
           </Button>
         </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+        <LeaveSummaryCard />
+        <ScheduleSummaryCard />
+        <KpiSummaryCard />
+      </div>
+
+      <div className="mt-6">
+        <SecurityLogCard />
       </div>
     </div>
   );
