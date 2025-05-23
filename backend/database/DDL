@@ -64,15 +64,32 @@ CREATE TABLE IF NOT EXISTS kpi_records (
 
 -- 휴가 신청 테이블
 CREATE TABLE IF NOT EXISTS vacations (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,          -- 휴가 ID
-  user_id INTEGER,                               -- 신청자 (users.id)
-  type_code TEXT,                                -- 공통 코드 ex: 'ANNUAL', 'HALF', ...
-  start_date TEXT,                               -- 시작일
-  end_date TEXT,                                 -- 종료일
-  status TEXT DEFAULT '대기',                    -- 상태: 대기, 승인, 반려
-  reason TEXT,                                   -- 신청 사유
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP, -- 생성일
+  id INTEGER PRIMARY KEY AUTOINCREMENT,             -- 휴가 고유 ID
+  user_id INTEGER,                                  -- 신청자 ID (users.id 외래키)
+  type_code TEXT,                                   -- 휴가 유형: ANNUAL, SICK, HALF, TIME_SHIFT 등 (공통코드)
+  start_date TEXT,                                  -- 휴가 시작일 (YYYY-MM-DD)
+  end_date TEXT,                                    -- 휴가 종료일 (YYYY-MM-DD)
+  start_time TEXT,                                  -- 시작 시간 (예: '09:00', 반차/시차용), NULL 가능
+  end_time TEXT,                                    -- 종료 시간 (예: '13:00'), NULL 가능
+  duration_unit TEXT,                               -- 'FULL', 'HALF', 'HOUR' 등 (공통코드)
+  status TEXT DEFAULT 'PENDING',                        -- 휴가 상태: 대기, 승인, 반려, 취소완료 등
+  reason TEXT,                                      -- 휴가 신청 사유
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,    -- 신청일시
   FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+-- 휴가 변경 이력 테이블
+CREATE TABLE IF NOT EXISTS vacation_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,             -- 이력 고유 ID
+  vacation_id INTEGER,                              -- 대상 휴가 ID (vacations.id 외래키)
+  user_id INTEGER,                                  -- 휴가 소유자 ID (users.id)
+  action TEXT,                                      -- 변경 행위: 신청, 승인, 수정, 취소 등
+  old_value TEXT,                                   -- 이전 값(JSON) 예: {"status":"대기"}
+  new_value TEXT,                                   -- 변경 후 값(JSON) 예: {"status":"승인"}
+  memo TEXT,                                        -- 비고 또는 관리자 메모
+  admin_id INTEGER,                                 -- 실제 변경한 사람 (관리자 or 본인)
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,    -- 기록 시간
+  FOREIGN KEY(vacation_id) REFERENCES vacations(id)
 );
 
 -- 공지사항 테이블

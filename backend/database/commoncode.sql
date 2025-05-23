@@ -165,3 +165,30 @@ INSERT INTO common_codes (code_group, code, label, sort_order, active) VALUES
 ('EDU_CATEGORY', 'LEADERSHIP', '리더십 교육', 3, 1),
 ('EDU_CATEGORY', 'IT', 'IT 기술 교육', 4, 1),
 ('EDU_CATEGORY', 'ETC', '기타', 5, 1);
+
+INSERT INTO common_codes (code_group, code, label, sort_order, active) VALUES
+('DURATION_UNIT', 'FULL', '하루', 1, 1),
+('DURATION_UNIT', 'HALF', '반차', 2, 1),
+('DURATION_UNIT', 'HOUR', '시간 단위', 3, 1);
+
+INSERT INTO common_codes (code_group, code, label, sort_order, active) VALUES
+-- 사용자가 신청 완료했지만 아직 검토되지 않은 초기 상태
+('APPROVAL_STATUS', 'PENDING', '대기', 1, 1),
+
+-- 중간 결재자 또는 HR 부서가 검토 중인 상태 (예: 복수 단계 결재 도입 시)
+('APPROVAL_STATUS', 'IN_REVIEW', '검토 중', 2, 1),
+
+-- 최종 승인 완료 상태 (휴가 확정, 요청 수리 등)
+('APPROVAL_STATUS', 'APPROVED', '승인', 3, 1),
+
+-- 관리자나 결재자가 반려한 상태 (사유 부적절, 휴가 거절 등)
+('APPROVAL_STATUS', 'REJECTED', '반려', 4, 1),
+
+-- 서류 보완 요청 등으로 다시 사용자에게 되돌린 상태
+('APPROVAL_STATUS', 'RETURNED', '반환', 5, 1),
+
+-- 사용자가 자발적으로 신청을 철회하거나, 진행 중단한 상태
+('APPROVAL_STATUS', 'CANCELLED', '취소', 6, 1),
+
+-- 검토나 승인이 지연되어 유효 기간이 지나 자동으로 폐기된 상태
+('APPROVAL_STATUS', 'EXPIRED', '만료', 7, 1);
