@@ -1,6 +1,7 @@
 const db = require("../config/db");
 const { logSystemAction } = require("../utils/handleError");
 const { LOG_ACTIONS } = require("../utils/logActions");
+const { findOverlappingVacation } = require("../models/vacationModel");
 
 // 1. 내 휴가 목록 조회
 exports.getMyVacations = (req, res) => {
@@ -35,62 +36,88 @@ exports.applyVacation = (req, res) => {
       reason,
     } = req.body;
     const user = req.user;
+    // 로그 찍기
+    console.log("[휴가 신청] 시간값 체크:", {
+      start_date,
+      end_date,
+      start_time,
+      end_time,
+      duration_unit,
+    });
 
-    const sql = `
+    // 중복 체크는 try 블록 안에서!
+    findOverlappingVacation(
+      user.id,
+      start_date,
+      end_date,
+      start_time,
+      end_time,
+      duration_unit,
+      (err, row) => {
+        if (err) return res.status(500).json({ error: "중복 검사 실패" });
+        if (row) {
+          return res
+            .status(400)
+            .json({ error: "해당 기간에 이미 신청된 휴가가 존재합니다." });
+        }
+
+        const sql = `
       INSERT INTO vacations (
         user_id, type_code, start_date, end_date,
         start_time, end_time, duration_unit, reason, status
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING')
     `;
 
-    db.run(
-      sql,
-      [
-        user.id,
-        type_code,
-        start_date,
-        end_date,
-        start_time || null,
-        end_time || null,
-        duration_unit || "FULL",
-        reason || null,
-      ],
-      function (err) {
-        if (err) return handleDbError(res, "휴가 신청 INSERT", err);
+        db.run(
+          sql,
+          [
+            user.id,
+            type_code,
+            start_date,
+            end_date,
+            start_time || null,
+            end_time || null,
+            duration_unit || "FULL",
+            reason || null,
+          ],
+          function (err) {
+            if (err) return handleDbError(res, "휴가 신청 INSERT", err);
 
-        const newValue = JSON.stringify({
-          type_code,
-          start_date,
-          end_date,
-          start_time,
-          end_time,
-          duration_unit,
-          status: "PENDING",
-        });
+            const newValue = JSON.stringify({
+              type_code,
+              start_date,
+              end_date,
+              start_time,
+              end_time,
+              duration_unit,
+              status: "PENDING",
+            });
 
-        const historySql = `
+            const historySql = `
           INSERT INTO vacation_history (
             vacation_id, user_id, action, new_value, admin_id
           ) VALUES (?, ?, 'PENDING', ?, ?)
         `;
-        db.run(
-          historySql,
-          [this.lastID, user.id, newValue, user.id],
-          (err2) => {
-            if (err2) {
-              logError("휴가 히스토리 INSERT", err2);
-            }
+            db.run(
+              historySql,
+              [this.lastID, user.id, newValue, user.id],
+              (err2) => {
+                if (err2) {
+                  logError("휴가 히스토리 INSERT", err2);
+                }
+              }
+            );
+
+            logSystemAction(
+              req,
+              user,
+              LOG_ACTIONS.VACATION_REQUEST,
+              `${type_code} 휴가 신청`
+            );
+
+            res.json({ success: true });
           }
         );
-
-        logSystemAction(
-          req,
-          user,
-          LOG_ACTIONS.VACATION_REQUEST,
-          `${type_code} 휴가 신청`
-        );
-
-        res.json({ success: true });
       }
     );
   } catch (err) {

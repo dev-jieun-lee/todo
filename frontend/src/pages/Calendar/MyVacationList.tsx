@@ -98,11 +98,7 @@ const MyVacationList = ({ codeMap }: MyVacationListProps) => {
                     <div className="text-xs text-gray-500">
                       ({v.start_time === "09:00" ? "오전 반차" : "오후 반차"})
                     </div>
-                  ) : (
-                    <div className="text-xs text-gray-500">
-                      ({v.duration_unit})
-                    </div>
-                  )}
+                  ) : null}
                 </td>
                 <td className="px-3 py-2">{codeMap[v.status] || v.status}</td>
                 <td className="px-3 py-2">{v.reason || "-"}</td>

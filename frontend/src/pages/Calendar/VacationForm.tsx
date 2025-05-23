@@ -3,10 +3,12 @@ import { useEffect, useState } from "react";
 import api from "../../utils/axiosInstance";
 import { toast } from "react-toastify";
 import { logEvent } from "../../utils/logger";
+import type { Vacation } from "../../types";
 
 interface VacationFormProps {
   onSubmitted?: () => void;
   className?: string;
+  vacations: Vacation[];
 }
 
 const timeOptions = [
@@ -20,6 +22,7 @@ const timeOptions = [
 const VacationForm: React.FC<VacationFormProps> = ({
   onSubmitted,
   className = "",
+  vacations,
 }) => {
   const [types, setTypes] = useState<{ code: string; label: string }[]>([]);
   const [form, setForm] = useState({
@@ -29,6 +32,9 @@ const VacationForm: React.FC<VacationFormProps> = ({
     reason: "",
     half_day_type: "",
     time_shift_range: "",
+    start_time: "",
+    end_time: "",
+    duration_unit: "FULL",
   });
   const [submitting, setSubmitting] = useState(false);
   const today = new Date().toISOString().split("T")[0];
@@ -59,6 +65,7 @@ const VacationForm: React.FC<VacationFormProps> = ({
   useEffect(() => {
     console.log("💡 선택된 type_code:", form.type_code);
   }, [form.type_code]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -66,18 +73,58 @@ const VacationForm: React.FC<VacationFormProps> = ({
       toast.error("시작일은 종료일보다 앞서야 합니다.");
       return;
     }
+    // 시간 관련 변수 먼저 계산
+    const duration_unit = isTimeShift ? "HOUR" : isHalfDay ? "HALF" : "FULL";
+    const start_time = isHalfDay
+      ? form.half_day_type === "AM"
+        ? "09:00"
+        : "13:30"
+      : isTimeShift
+      ? form.time_shift_range.split("-")[0]
+      : "";
+    const end_time = isHalfDay
+      ? form.half_day_type === "AM"
+        ? "13:30"
+        : "18:00"
+      : isTimeShift
+      ? form.time_shift_range.split("-")[1]
+      : "";
 
+    const formStart = form.start_date;
+    const formEnd = isHalfDay || isTimeShift ? form.start_date : form.end_date;
+
+    // 중복 검사 (프론트에서 필터링)
+    const isOverlapping = vacations.some((v) => {
+      if (v.status === "CANCELED") return false;
+
+      const dateOverlap = formStart <= v.end_date && formEnd >= v.start_date;
+
+      if (
+        dateOverlap &&
+        (duration_unit === "HOUR" || duration_unit === "HALF")
+      ) {
+        if (v.duration_unit === "HOUR" || v.duration_unit === "HALF") {
+          const vStart = v.start_time ?? "00:00";
+          const vEnd = v.end_time ?? "23:59";
+
+          return !(end_time <= vStart || start_time >= vEnd);
+        }
+      }
+
+      return dateOverlap && v.duration_unit === "FULL";
+    });
+
+    if (isOverlapping) {
+      toast.error("해당 기간에 이미 휴가 신청이 존재합니다.");
+      return;
+    }
+
+    // 실제 요청
     const payload = {
       ...form,
-      duration_unit: isTimeShift ? "HOUR" : isHalfDay ? "HALF" : "FULL",
-      ...(isHalfDay && {
-        start_time: form.half_day_type === "AM" ? "09:00" : "13:30",
-        end_time: form.half_day_type === "AM" ? "13:30" : "18:00",
-      }),
-      ...(isTimeShift && {
-        start_time: form.time_shift_range.split("-")[0],
-        end_time: form.time_shift_range.split("-")[1],
-      }),
+      duration_unit,
+      start_time,
+      end_time,
     };
 
     try {
@@ -95,7 +142,11 @@ const VacationForm: React.FC<VacationFormProps> = ({
         reason: "",
         half_day_type: "",
         time_shift_range: "",
+        start_time: "",
+        end_time: "",
+        duration_unit: "FULL",
       });
+
       onSubmitted?.();
     } catch (err) {
       toast.error("휴가 신청에 실패했습니다.");
@@ -161,6 +212,7 @@ const VacationForm: React.FC<VacationFormProps> = ({
             value={form.end_date}
             onChange={(e) => setForm({ ...form, end_date: e.target.value })}
             required
+            readOnly={isHalfDay || isTimeShift}
           />
         </div>
       </div>
