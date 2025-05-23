@@ -92,6 +92,7 @@ CREATE TABLE IF NOT EXISTS vacation_history (
   FOREIGN KEY(vacation_id) REFERENCES vacations(id)
 );
 
+
 -- 공지사항 테이블
 CREATE TABLE IF NOT EXISTS notices (
   id INTEGER PRIMARY KEY AUTOINCREMENT,         -- 공지 ID
@@ -180,4 +181,19 @@ CREATE TABLE IF NOT EXISTS menus (
   type TEXT DEFAULT 'link', -- link / group / divider / external 등
   description TEXT,          -- 마우스 오버 도움말 등
   sort_order INTEGER DEFAULT 0
+);
+
+
+--전자문서승인테이블
+CREATE TABLE IF NOT EXISTS approvals (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  target_type TEXT NOT NULL,     -- "vacation" | "kpi" | "todo" | "notice"
+  target_id INTEGER NOT NULL,    -- 해당 항목의 ID
+  approver_id INTEGER NOT NULL,
+  step INTEGER NOT NULL,         -- 1차, 2차
+  status TEXT NOT NULL,          -- PENDING | APPROVED | REJECTED
+  memo TEXT,
+  approved_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(target_type, target_id, approver_id),
+  FOREIGN KEY (approver_id) REFERENCES users(id)
 );

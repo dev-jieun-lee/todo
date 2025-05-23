@@ -4,19 +4,7 @@ import api from "../../utils/axiosInstance";
 import { logEvent } from "../../utils/logger";
 import { toast } from "react-toastify";
 import { AxiosError } from "axios";
-
-interface Vacation {
-  id: number;
-  type_code: string;
-  start_date: string;
-  end_date: string;
-  start_time?: string;
-  end_time?: string;
-  duration_unit: string;
-  status: string;
-  reason: string;
-  created_at: string;
-}
+import type { Vacation } from "../../types";
 
 interface MyVacationListProps {
   codeMap: Record<string, string>;
@@ -102,7 +90,9 @@ const MyVacationList = ({ codeMap }: MyVacationListProps) => {
                 </td>
                 <td className="px-3 py-2">{codeMap[v.status] || v.status}</td>
                 <td className="px-3 py-2">{v.reason || "-"}</td>
-                <td className="px-3 py-2">{v.created_at.slice(0, 10)}</td>
+                <td className="px-3 py-2">
+                  {v.created_at ? v.created_at.slice(0, 10) : "-"}
+                </td>
                 <td className="px-3 py-2">
                   {v.status === "PENDING" ? (
                     <button

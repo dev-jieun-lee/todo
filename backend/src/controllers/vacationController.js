@@ -188,3 +188,113 @@ exports.cancelVacation = (req, res) => {
     res.status(500).json({ error: "휴가 취소 예외 발생" });
   }
 };
+
+//4.승인 및 반려 처리
+// 승인 처리
+exports.approveVacation = (req, res) => {
+  const vacationId = req.params.id;
+  const adminId = req.user.id;
+
+  const getSql = `SELECT * FROM vacations WHERE id = ? AND status = 'PENDING'`;
+  db.get(getSql, [vacationId], (err, oldRow) => {
+    if (err) return res.status(500).json({ error: "기존 휴가 조회 실패" });
+    if (!oldRow)
+      return res.status(404).json({ error: "대기 중인 휴가가 없습니다." });
+
+    const updateSql = `
+      UPDATE vacations
+      SET status = 'APPROVED',
+          approved_by = ?,
+          approved_at = datetime('now')
+      WHERE id = ?
+    `;
+    db.run(updateSql, [adminId, vacationId], function (err2) {
+      if (err2) return res.status(500).json({ error: "승인 처리 실패" });
+
+      const oldValue = JSON.stringify({ status: oldRow.status });
+      const newValue = JSON.stringify({ status: "APPROVED" });
+
+      const historySql = `
+        INSERT INTO vacation_history (
+          vacation_id, user_id, action, old_value, new_value, memo, admin_id
+        ) VALUES (?, ?, 'APPROVED', ?, ?, '관리자 승인', ?)
+      `;
+      db.run(
+        historySql,
+        [vacationId, oldRow.user_id, oldValue, newValue, adminId],
+        (err3) => {
+          if (err3) console.warn("휴가 승인 히스토리 기록 실패:", err3);
+        }
+      );
+
+      res.json({ success: true });
+    });
+  });
+};
+
+// 반려 처리
+exports.rejectVacation = (req, res) => {
+  const vacationId = req.params.id;
+  const adminId = req.user.id;
+  const { memo = "관리자 반려" } = req.body;
+
+  const getSql = `SELECT * FROM vacations WHERE id = ? AND status = 'PENDING'`;
+  db.get(getSql, [vacationId], (err, oldRow) => {
+    if (err) return res.status(500).json({ error: "기존 휴가 조회 실패" });
+    if (!oldRow)
+      return res.status(404).json({ error: "대기 중인 휴가가 없습니다." });
+
+    const updateSql = `
+      UPDATE vacations
+      SET status = 'REJECTED',
+          approved_by = ?,
+          approved_at = datetime('now')
+      WHERE id = ?
+    `;
+    db.run(updateSql, [adminId, vacationId], function (err2) {
+      if (err2) return res.status(500).json({ error: "반려 처리 실패" });
+
+      const oldValue = JSON.stringify({ status: oldRow.status });
+      const newValue = JSON.stringify({ status: "REJECTED" });
+
+      const historySql = `
+        INSERT INTO vacation_history (
+          vacation_id, user_id, action, old_value, new_value, memo, admin_id
+        ) VALUES (?, ?, 'REJECTED', ?, ?, ?, ?)
+      `;
+      db.run(
+        historySql,
+        [vacationId, oldRow.user_id, oldValue, newValue, memo, adminId],
+        (err3) => {
+          if (err3) console.warn("휴가 반려 히스토리 기록 실패:", err3);
+        }
+      );
+
+      res.json({ success: true });
+    });
+  });
+};
+
+// 전체 휴가 요청 목록 (관리자용)
+exports.getAllVacationRequests = (req, res) => {
+  const sql = `
+    SELECT
+      v.*,
+      u.username AS user_username,
+      u.name AS user_name,
+      a.username AS approver_username,
+      a.name AS approver_name,
+      a.department_code AS approver_dept,
+      a.position_code AS approver_position,
+      v.reason,
+      v.created_at
+    FROM vacations v
+    JOIN users u ON v.user_id = u.id
+    LEFT JOIN users a ON v.approved_by = a.id
+    ORDER BY v.created_at DESC
+  `;
+  db.all(sql, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: "휴가 목록 조회 실패" });
+    res.json(rows);
+  });
+};
