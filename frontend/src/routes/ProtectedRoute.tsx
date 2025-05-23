@@ -9,7 +9,9 @@ const ProtectedRoute = ({
   element: React.ReactElement;
   requireAdmin?: boolean;
 }) => {
-  const { token, role } = useUser();
+  const { token, role, isLoading } = useUser();
+
+  if (isLoading) return null; // 또는 <Spinner /> 등
 
   if (!token) return <Navigate to="/login" />;
 

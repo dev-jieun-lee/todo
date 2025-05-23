@@ -7,23 +7,22 @@ const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
-  const { login } = useUser();
+  const { login, logout } = useUser();
 
   const handleLogin = async () => {
     try {
+      //기존 세션 초기화 (쿠키, 메모리, localStorage)
+      await logout();
       const res = await axios.post("/api/auth/login", { username, password });
 
       const { token, user } = res.data; // 🔑 서버에서 token과 user 정보 반환
-
-      // Context에도 저장
-
+      //로그인 정보 저장 + 메모리 토큰 등록
       login({
         token,
         username: user.username,
         name: user.name,
         role: user.role,
       });
-
       navigate("/");
     } catch (err) {
       if (axios.isAxiosError(err)) {

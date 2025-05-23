@@ -110,7 +110,7 @@ const Sidebar = () => {
     };
 
     fetchMenus();
-  }, []);
+  }, [role]);
 
   const toggleMenu = (label: string) => {
     setOpenMenus((prev) =>

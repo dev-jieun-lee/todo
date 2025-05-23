@@ -8,6 +8,7 @@ const {
   saveRefreshToken,
   findRefreshToken,
   deleteRefreshToken,
+  deleteAllTokensByUserId,
 } = require("../models/refreshTokenModel");
 
 const {
@@ -68,6 +69,7 @@ const login = (req, res) => {
           username: user.username,
           role: user.role,
         };
+
         const accessToken = jwt.sign(payload, SECRET_KEY, { expiresIn: "30m" });
         const refreshToken = jwt.sign(payload, SECRET_KEY, {
           expiresIn: "14d",
@@ -82,33 +84,47 @@ const login = (req, res) => {
         );
         const createdAtKST = formatToKstString(now);
 
-        // 3. 저장 (createdAt 인자 추가됨!)
-        saveRefreshToken(
-          user.id,
-          refreshToken,
-          expiresAtKST,
-          createdAtKST,
-          (err) => {
-            if (err) logError("Refresh Token 저장", err);
-            else logEvent(`Refresh Token 저장 완료 (ID: ${user.id})`);
+        // 기존 Refresh Token 삭제 (1인 1토큰 정책 적용)
+        deleteAllTokensByUserId(user.id, (deleteErr) => {
+          if (deleteErr) {
+            logError("기존 Refresh Token 삭제 실패", deleteErr);
+          } else {
+            logEvent(`기존 Refresh Token 삭제 완료 (ID: ${user.id})`);
           }
-        );
 
-        res.cookie("refreshToken", refreshToken, {
-          httpOnly: true,
-          secure: false,
-          sameSite: "strict",
-          maxAge: 14 * 24 * 60 * 60 * 1000,
-        });
+          // 새 Refresh Token 저장
+          saveRefreshToken(
+            user.id,
+            refreshToken,
+            expiresAtKST,
+            createdAtKST,
+            (err) => {
+              if (err) {
+                logError("Refresh Token 저장 실패", err);
+              } else {
+                logEvent(`Refresh Token 저장 완료 (ID: ${user.id})`);
+              }
+            }
+          );
 
-        return res.json({
-          token: accessToken,
-          user: {
-            id: user.id,
-            username: user.username,
-            name: user.name,
-            role: user.role,
-          },
+          // 클라이언트에 Refresh Token을 httpOnly 쿠키로 전달
+          res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: false, // 실제 운영 시에는 true (HTTPS) 권장
+            sameSite: "strict",
+            maxAge: 14 * 24 * 60 * 60 * 1000, // 14일
+          });
+
+          // Access Token과 사용자 정보 반환
+          return res.json({
+            token: accessToken,
+            user: {
+              id: user.id,
+              username: user.username,
+              name: user.name,
+              role: user.role,
+            },
+          });
         });
       });
     });

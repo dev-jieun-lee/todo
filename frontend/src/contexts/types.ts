@@ -13,4 +13,5 @@ export type UserContextType = {
   }) => void;
   logout: () => void;
   updateToken: (newToken: string) => void;
+  isLoading: boolean;
 };
