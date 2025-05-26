@@ -38,17 +38,17 @@ export default function ApprovalTabPanel({
   }, []);
 
   useEffect(() => {
-    const url =
-      selectedType === "ALL"
-        ? fetchUrl
-        : `${fetchUrl}?target_type=${selectedType}`;
+    const url = new URL(fetchUrl, window.location.origin);
+    if (selectedType !== "ALL") {
+      url.searchParams.set("target_type", selectedType);
+    }
+    const finalUrl = url.toString().replace(window.location.origin, "");
 
     api
-      .get(url)
+      .get(finalUrl)
       .then((res) => setItems(res.data))
       .catch(() => toast.error("결재 목록 불러오기 실패"));
   }, [selectedType, fetchUrl]);
-
   return (
     <div className="p-6 space-y-4">
       <h2 className="text-2xl font-bold">{title}</h2>

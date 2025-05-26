@@ -204,10 +204,9 @@ exports.getPendingToMe = async (req, res) => {
   const params = [userId];
 
   if (target_type) {
-    sql += ` AND target_type = ?`;
-    params.push(target_type);
+    sql += ` AND LOWER(target_type) = ?`;
+    params.push(target_type.toLowerCase());
   }
-
   sql += ` ORDER BY created_at ASC`;
 
   // db.all을 Promise로 래핑
