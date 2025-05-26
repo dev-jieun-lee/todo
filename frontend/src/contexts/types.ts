@@ -1,4 +1,4 @@
-export type RoleType = "user" | "ADMIN";
+export type RoleType = "user" | "ADMIN" | "USER" | "HR" | "LEADER";
 
 export type UserContextType = {
   username: string;

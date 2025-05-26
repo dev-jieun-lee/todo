@@ -2,7 +2,7 @@ import { useEffect, useState, type JSX } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import api from "../utils/axiosInstance";
 import { useUser } from "../contexts/useUser";
-import { checkAccess } from "../utils/checkAccess";
+import { checkAccessByScope } from "../utils/checkAccess";
 import {
   DashboardIcon,
   KpiIcon,
@@ -13,7 +13,6 @@ import {
   UserIcon,
   SettingsIcon,
 } from "./Icons";
-import type { RoleType } from "../contexts/types";
 
 const iconMap: Record<string, JSX.Element> = {
   DashboardIcon: <DashboardIcon />,
@@ -31,7 +30,7 @@ type MenuItem = {
   label: string;
   path?: string;
   icon?: JSX.Element | string;
-  roles?: RoleType[] | string;
+  scope_code?: string; // 핵심 필드
   parent_id?: number | null;
   children?: MenuItem[];
 };
@@ -51,58 +50,21 @@ const Sidebar = () => {
         const res = await api.get("/menus");
         const rawTree: MenuItem[] = res.data;
 
-        // roles 파싱 + icon 매핑
-        const parsedTree: MenuItem[] = rawTree.map((item: MenuItem) => {
-          const parsedRoles =
-            typeof item.roles === "string"
-              ? JSON.parse(item.roles)
-              : item.roles;
+        const parsedTree = rawTree.map((item) => ({
+          ...item,
+          icon: typeof item.icon === "string" ? iconMap[item.icon] : item.icon,
+        }));
 
-          const parsedChildren = item.children?.map((child: MenuItem) => ({
-            ...child,
-            roles:
-              typeof child.roles === "string"
-                ? JSON.parse(child.roles)
-                : child.roles,
+        const visibleMenus = parsedTree
+          .filter((item) => checkAccessByScope(role, item.scope_code))
+          .map((parent) => ({
+            ...parent,
+            children: parent.children?.filter((child) =>
+              checkAccessByScope(role, child.scope_code)
+            ),
           }));
 
-          return {
-            ...item,
-            icon:
-              typeof item.icon === "string" ? iconMap[item.icon] : item.icon,
-            roles: parsedRoles,
-            children: parsedChildren,
-          };
-        });
-
-        // role 필터링
-        const visibleMenus = parsedTree
-          .filter((item) => {
-            const parsedRoles =
-              typeof item.roles === "string"
-                ? (JSON.parse(item.roles) as RoleType[])
-                : item.roles;
-            return checkAccess(role, parsedRoles);
-          })
-          .map((parent) => {
-            const parsedChildren = parent.children?.map((child) => {
-              const parsedChildRoles =
-                typeof child.roles === "string"
-                  ? (JSON.parse(child.roles) as RoleType[])
-                  : child.roles;
-              return {
-                ...child,
-                roles: parsedChildRoles,
-              };
-            });
-
-            return {
-              ...parent,
-              children: parsedChildren?.filter((child) =>
-                checkAccess(role, child.roles)
-              ),
-            };
-          });
+        console.log("👀 최종 메뉴:", visibleMenus);
         setFilteredMenuItems(visibleMenus);
       } catch (err) {
         console.error("❌ 메뉴 로딩 실패:", err);

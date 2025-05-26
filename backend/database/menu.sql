@@ -80,3 +80,28 @@ CREATE TABLE IF NOT EXISTS menus (
 SET roles = '["ADMIN", "USER", "HR"]'
 WHERE parent_id IS NOT NULL
   AND roles IS NULL;
+
+
+  -- 상위 메뉴: 결재함 (id = 9)
+INSERT INTO menus (
+  id, parent_id, label, path, icon, roles, visibility, type, description, sort_order
+) VALUES (
+  9, NULL, '결재함', NULL, 'InboxIcon',
+  '["ADMIN", "USER", "HR"]', 'visible', 'group', '승인 관련 요청 및 결재 보기', 7
+);
+
+-- 하위 메뉴: 내가 승인할 항목 (id = 38)
+INSERT INTO menus (
+  id, parent_id, label, path, icon, roles, visibility, type, description, sort_order
+) VALUES (
+  38, 9, '내가 승인할 항목', '/approvals/inbox', NULL,
+  '["ADMIN", "USER", "HR"]', 'visible', 'link', '내가 결재할 승인 요청 목록', 1
+);
+
+-- 하위 메뉴: 내가 요청한 항목 (id = 39)
+INSERT INTO menus (
+  id, parent_id, label, path, icon, roles, visibility, type, description, sort_order
+) VALUES (
+  39, 9, '내가 요청한 항목', '/approvals/requested', NULL,
+  '["ADMIN", "USER", "HR"]', 'visible', 'link', '내가 신청한 승인 요청 목록', 2
+);

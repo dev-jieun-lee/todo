@@ -67,7 +67,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         setName(name);
         setToken(token);
         setRole(role);
-        setIsLoading(false); // ✅ 복원 완료 후 로딩 종료
+        setIsLoading(false); // 복원 완료 후 로딩 종료
       }
     } else {
       setIsLoading(false); // localStorage 없을 때도 종료

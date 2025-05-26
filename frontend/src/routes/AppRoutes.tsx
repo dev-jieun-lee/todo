@@ -31,7 +31,7 @@ import BoardProject from "../pages/Board/Project";
 import CalendarTeam from "../pages/Calendar/Team";
 import CalendarDeploy from "../pages/Calendar/Deploy";
 import CalendarMeeting from "../pages/Calendar/Meeting";
-import CalendarVacation from "../pages/Calendar/Vacation";
+import Vacation from "../pages/approvals/Vacation";
 import CalendarDeadline from "../pages/Calendar/Deadline";
 
 // 공지
@@ -42,7 +42,7 @@ import NoticeSuggestion from "../pages/Notice/Suggestion";
 // 관리자
 import AdminUsers from "../pages/Admin/Users";
 import AdminRoles from "../pages/Admin/Roles";
-import AdminVacations from "../pages/Admin/Vacations";
+
 import AdminSettingsCategories from "../pages/Admin/Settings/Categories";
 import AdminSettingsCalendar from "../pages/Admin/Settings/Calendar";
 import AdminSettingsReset from "../pages/Admin/Settings/Reset";
@@ -53,6 +53,10 @@ import AdminSessionsPage from "../pages/Admin/Sessions";
 import MyProfilePage from "../pages/profile";
 import MySessionsPage from "../pages/profile/sessions";
 
+//결재함
+import InboxPage from "../pages/approvals/InboxPage";
+import RequestedPage from "../pages/approvals/RequestedPage";
+import VacationPage from "../pages/approvals/Vacation";
 //에러
 import Error403 from "../pages/error/403";
 import Error404 from "../pages/error/404";
@@ -134,10 +138,7 @@ const AppRoutes = () => {
         path="/calendar/meeting"
         element={<ProtectedRoute element={<CalendarMeeting />} />}
       />
-      <Route
-        path="/calendar/vacation"
-        element={<ProtectedRoute element={<CalendarVacation />} />}
-      />
+      <Route path="/calendar/vacation" element={<Vacation />} />
       <Route
         path="/calendar/deadline"
         element={<ProtectedRoute element={<CalendarDeadline />} />}
@@ -164,10 +165,10 @@ const AppRoutes = () => {
         path="/admin/roles"
         element={<ProtectedRoute element={<AdminRoles />} />}
       />
-      <Route
+      {/* <Route
         path="/admin/vacations"
         element={<ProtectedRoute element={<AdminVacations />} />}
-      />
+      /> */}
       <Route
         path="/admin/settings/categories"
         element={<ProtectedRoute element={<AdminSettingsCategories />} />}
@@ -200,6 +201,19 @@ const AppRoutes = () => {
       <Route
         path="/profile/sessions"
         element={<ProtectedRoute element={<MySessionsPage />} />}
+      />
+      {/* 결재함 */}
+      <Route
+        path="/approvals/inbox"
+        element={<ProtectedRoute element={<InboxPage />} />}
+      />
+      <Route
+        path="/approvals/requested"
+        element={<ProtectedRoute element={<RequestedPage />} />}
+      />
+      <Route
+        path="/approvals/apply-vacation"
+        element={<ProtectedRoute element={<VacationPage />} />}
       />
       {/* 에러 */}
       <Route path="/error/403" element={<Error403 />} />

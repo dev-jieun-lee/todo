@@ -80,7 +80,7 @@ exports.findOverlappingVacation = (
     if (row) {
       console.log("⚠️ [중복된 기존 휴가 데이터]", row);
     } else {
-      console.log("✅ 중복 없음");
+      console.log("중복 없음");
     }
 
     callback(null, row);

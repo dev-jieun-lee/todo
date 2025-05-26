@@ -18,7 +18,7 @@ const authenticateToken = (req, res, next) => {
       return res.status(403).json({ error: "유효하지 않은 토큰입니다." });
     }
 
-    console.log(`✅ JWT 검증 통과 - 사용자: ${user.username}`);
+    console.log(`JWT 검증 통과 - 사용자: ${user.username}`);
     req.user = user;
     next();
   });

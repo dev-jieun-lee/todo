@@ -192,3 +192,13 @@ INSERT INTO common_codes (code_group, code, label, sort_order, active) VALUES
 
 -- 검토나 승인이 지연되어 유효 기간이 지나 자동으로 폐기된 상태
 ('APPROVAL_STATUS', 'EXPIRED', '만료', 7, 1);
+
+
+INSERT INTO common_codes (code_group, code, label, sort_order, active) VALUES
+('APPROVAL_TARGET', 'VACATION', '휴가 신청', 1, 1),
+('APPROVAL_TARGET', 'KPI', 'KPI 설정', 2, 1),
+('APPROVAL_TARGET', 'TODO', '실행 계획', 3, 1),
+('APPROVAL_TARGET', 'NOTICE', '공지 등록', 4, 1),
+('APPROVAL_TARGET', 'PROJECT', '프로젝트 시작', 5, 1),
+('APPROVAL_TARGET', 'TRANSFER', '인사이동 요청', 6, 1),
+('APPROVAL_TARGET', 'DOCUMENT', '문서 결재', 7, 1);

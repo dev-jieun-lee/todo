@@ -1,4 +1,4 @@
-// ✅ 실행 관리 > 상태별 보기
+// 실행 관리 > 상태별 보기
 
 const Status = () => (
   <div className="p-6">

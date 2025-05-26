@@ -15,7 +15,7 @@ const Header = () => {
     navigate("/login");
   };
 
-  // ✅ 외부 클릭 시 닫기
+  // 외부 클릭 시 닫기
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (

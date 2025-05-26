@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import api from "../../utils/axiosInstance";
 import { toast } from "react-toastify";
 import { handleApiError } from "../../utils/handleErrorFront";
-import type { Vacation } from "../../types";
+import type { ApprovalVacation } from "../../types/types";
 
 const Vacations = () => {
-  const [vacations, setVacations] = useState<Vacation[]>([]);
+  const [vacations, setVacations] = useState<ApprovalVacation[]>([]);
   const [codeMap, setCodeMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -34,7 +34,9 @@ const Vacations = () => {
 
   const fetchVacations = async () => {
     try {
-      const res = await api.get("/vacations/all");
+      const res = await api.get<ApprovalVacation[]>("/approvals/pending", {
+        params: { target_type: "vacation" },
+      });
       setVacations(res.data);
     } catch (err) {
       handleApiError(err, "휴가 요청 목록 불러오기 실패");
@@ -43,7 +45,7 @@ const Vacations = () => {
 
   const handleApprove = async (id: number) => {
     try {
-      await api.post(`/vacations/approve/${id}`);
+      await api.post(`/approvals/vacation/${id}/approve`);
       toast.success("승인 완료");
       fetchVacations();
     } catch (err) {
@@ -53,7 +55,7 @@ const Vacations = () => {
 
   const handleReject = async (id: number) => {
     try {
-      await api.post(`/vacations/reject/${id}`, { memo: "반려 처리" });
+      await api.post(`/approvals/vacation/${id}/reject`, { memo: "반려 사유" });
       toast.success("반려 완료");
       fetchVacations();
     } catch (err) {
@@ -72,9 +74,7 @@ const Vacations = () => {
   return (
     <div className="p-6">
       <h2 className="text-2xl font-bold mb-4">🛂 휴가 승인 / 계정 잠금</h2>
-      <p className="text-gray-600 mb-4">
-        휴가 요청 승인 및 계정 잠금 처리를 진행합니다.
-      </p>
+      <p className="text-gray-600 mb-4">휴가 요청 승인 처리를 진행합니다.</p>
 
       <table className="w-full border text-sm">
         <thead className="bg-gray-100 text-left">
@@ -124,13 +124,13 @@ const Vacations = () => {
                 {v.status === "PENDING" ? (
                   <div className="space-x-2">
                     <button
-                      onClick={() => handleApprove(v.id)}
+                      onClick={() => handleApprove(v.target_id)}
                       className="text-green-600 hover:underline"
                     >
                       승인
                     </button>
                     <button
-                      onClick={() => handleReject(v.id)}
+                      onClick={() => handleReject(v.target_id)}
                       className="text-red-600 hover:underline"
                     >
                       반려

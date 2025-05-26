@@ -1,12 +1,12 @@
 🔍 구성 리뷰
 폴더/파일	목적	상태
-src/components/	공통 UI 컴포넌트 (버튼, 카드 등)	✅ OK
-src/layouts/	Sidebar, MainLayout 등 전체 레이아웃	✅ OK
-src/pages/	각 페이지 컴포넌트 (Dashboard, Todo)	✅ OK
-src/routes/	라우팅 설정 파일 (AppRoutes.tsx)	✅ OK
-src/services/	API 연동 모듈 (axios 등)	✅ OK
-src/store/	상태관리 (Context, Recoil 등)	✅ OK
-src/styles/	글로벌 CSS / 변수 파일들	✅ OK
-index.css	Tailwind 핵심 스타일 엔트리	✅ OK
-main.tsx	React 앱 진입점	✅ OK
-vite-env.d.ts	Vite 타입 선언	✅ OK
+src/components/	공통 UI 컴포넌트 (버튼, 카드 등)	OK
+src/layouts/	Sidebar, MainLayout 등 전체 레이아웃	OK
+src/pages/	각 페이지 컴포넌트 (Dashboard, Todo)	OK
+src/routes/	라우팅 설정 파일 (AppRoutes.tsx)	OK
+src/services/	API 연동 모듈 (axios 등)	OK
+src/store/	상태관리 (Context, Recoil 등)	OK
+src/styles/	글로벌 CSS / 변수 파일들	OK
+index.css	Tailwind 핵심 스타일 엔트리	OK
+main.tsx	React 앱 진입점	OK
+vite-env.d.ts	Vite 타입 선언	OK

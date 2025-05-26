@@ -1,6 +1,5 @@
-// src/types.ts
-
-export interface Vacation {
+// DB와 연관된 휴가 타입 중심
+export interface VacationDetail {
   id: number;
   user_id: number;
   username: string;
@@ -14,18 +13,14 @@ export interface Vacation {
   status: string;
   reason?: string;
   created_at?: string;
-
   approved_by?: number;
   approved_at?: string;
-
-  // optional: 승인자 상세 정보 (LEFT JOIN 기반)
   approver_username?: string;
   approver_name?: string;
   approver_dept?: string;
   approver_position?: string;
 }
 
-/** 승인 이력 */
 export interface VacationApproval {
   id: number;
   vacation_id: number;
@@ -36,7 +31,19 @@ export interface VacationApproval {
   memo?: string;
 }
 
-/** 휴가 + 이력 묶음 */
-export interface VacationWithHistory extends Vacation {
+export interface VacationWithHistory extends VacationDetail {
   approvals: VacationApproval[];
+}
+
+export interface ApprovalVacation extends VacationDetail {
+  target_type: string;
+  target_id: number;
+  requester_id: number;
+  approver_id: number;
+  step: number;
+  order_no?: number;
+  memo?: string;
+  approved_at?: string;
+  due_date?: string;
+  is_final?: number;
 }

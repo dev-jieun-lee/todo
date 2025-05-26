@@ -56,6 +56,10 @@ const LOG_ACTIONS = {
 
   // 👤 내 정보
   PROFILE_VIEW: "PROFILE_VIEW",
+
+  // 전자문서
+  APPROVAL_QUERY: "APPROVAL_QUERY",
+  APPROVAL_QUERY_FAIL: "APPROVAL_QUERY_FAIL",
 };
 
 const LOG_ACTION_LABELS = {
@@ -114,6 +118,10 @@ const LOG_ACTION_LABELS = {
 
   // 👤 내 정보
   PROFILE_VIEW: "내 정보 조회",
+
+  //전자문서
+  APPROVAL_QUERY: "승인 요청 조회",
+  APPROVAL_QUERY_FAIL: "승인 요청 조회 실패",
 };
 
 module.exports = { LOG_ACTIONS, LOG_ACTION_LABELS };

@@ -8,7 +8,7 @@ const findUserByUsername = (username, callback) => {
     } else if (!row) {
       console.warn(`⚠️ 사용자 없음 (username: ${username})`);
     } else {
-      console.log(`✅ 사용자 조회 성공: ${username}`);
+      console.log(`사용자 조회 성공: ${username}`);
     }
     callback(err, row);
   });

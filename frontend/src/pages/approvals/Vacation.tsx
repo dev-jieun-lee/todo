@@ -1,11 +1,11 @@
 // src/pages/calendar/Vacation.tsx
 import { useState, useEffect } from "react";
 import VacationForm from "./VacationForm";
-import MyVacationList from "./MyVacationList";
+import MyVacationList from "../Calendar/MyVacationList";
 import LeaveSummaryCard from "../profile/LeaveSummaryCard";
 import api from "../../utils/axiosInstance";
 import { toast } from "react-toastify";
-import type { Vacation } from "../../../src/types";
+import type { VacationDetail } from "../../types/types";
 
 interface CommonCode {
   code: string;
@@ -14,7 +14,7 @@ interface CommonCode {
 const Vacation = () => {
   const [refreshFlag, setRefreshFlag] = useState(false);
   const [codeMap, setCodeMap] = useState<Record<string, string>>({});
-  const [vacations, setVacations] = useState<Vacation[]>([]);
+  const [vacations, setVacations] = useState<VacationDetail[]>([]);
 
   const handleSubmitted = () => {
     setRefreshFlag((prev) => !prev);
@@ -41,7 +41,7 @@ const Vacation = () => {
 
   useEffect(() => {
     api
-      .get<Vacation[]>("/vacations/my")
+      .get<VacationDetail[]>("/vacations/my")
       .then((res) => setVacations(res.data))
       .catch((err) => {
         console.error("휴가 목록 불러오기 실패:", err);

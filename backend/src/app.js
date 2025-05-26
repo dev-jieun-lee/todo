@@ -15,7 +15,7 @@ app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
 
-// 📦 라우트 파일 import
+//라우트 파일 import
 const todoRoutes = require("./routes/todoRoutes");
 const authRoutes = require("./routes/authRoutes");
 const adminRoutes = require("./routes/adminRoutes");
@@ -25,8 +25,10 @@ const logRoutes = require("./routes/logRoutes");
 const menuRoutes = require("./routes/menuRoutes");
 const vacationRoutes = require("./routes/vacationRoutes");
 const commonCodeRoutes = require("./routes/commonCodeRoutes");
+const approvalRoutes = require("./routes/approvalRoutes");
+const userRoutes = require("./routes/userRoutes");
 
-// 📌 실제 API 라우팅 등록
+// 실제 API 라우팅 등록
 app.use("/api/todos", todoRoutes); // /api/todos/*
 app.use("/api/auth", authRoutes); // /api/auth/login, /auth/logout 등
 app.use("/api/admin", adminRoutes); // /api/admin/*
@@ -36,8 +38,10 @@ app.use("/api/log", logRoutes); // /api/log/menu-access 등
 app.use("/api/menus", menuRoutes);
 app.use("/api/vacations", vacationRoutes);
 app.use("/api/common-codes", commonCodeRoutes);
+app.use("/api/approvals", approvalRoutes);
+app.use("/api/user", userRoutes);
 
-// ❗ 공통 에러 핸들링
+//공통 에러 핸들링
 app.use((err, req, res, next) => {
   console.error("❗ 서버 예외:", err.message);
   res.status(500).json({ error: err.message || "서버 내부 오류" });

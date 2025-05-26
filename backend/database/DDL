@@ -185,15 +185,54 @@ CREATE TABLE IF NOT EXISTS menus (
 
 
 --전자문서승인테이블
+-- 휴가, KPI, TODO, 공지 등 승인 항목을 전부 커버하도록 설계
 CREATE TABLE IF NOT EXISTS approvals (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  target_type TEXT NOT NULL,     -- "vacation" | "kpi" | "todo" | "notice"
-  target_id INTEGER NOT NULL,    -- 해당 항목의 ID
-  approver_id INTEGER NOT NULL,
-  step INTEGER NOT NULL,         -- 1차, 2차
-  status TEXT NOT NULL,          -- PENDING | APPROVED | REJECTED
-  memo TEXT,
-  approved_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(target_type, target_id, approver_id),
-  FOREIGN KEY (approver_id) REFERENCES users(id)
+
+  target_type TEXT NOT NULL,         -- "vacation", "kpi", "todo", ...
+  target_id INTEGER NOT NULL,        -- 해당 항목의 고유 ID
+  requester_id INTEGER NOT NULL,     -- 최초 신청자 ID
+
+  approver_id INTEGER NOT NULL,      -- 승인자 ID
+  delegate_id INTEGER,               -- 대리 승인자 ID (승인자가 위임한 경우)
+
+  step INTEGER NOT NULL,             -- 승인 단계 (1차, 2차, ...)
+  order_no INTEGER DEFAULT 1,        -- 병렬 승인 시 승인자 순서
+
+  status TEXT NOT NULL DEFAULT 'PENDING',  -- PENDING | APPROVED | REJECTED | SKIPPED
+  memo TEXT,                         -- 승인/반려 메모
+
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  approved_at TEXT,
+  due_date TEXT,                     -- 승인 마감 기한
+
+  is_final INTEGER DEFAULT 0,        -- 1: 최종 승인자 여부
+
+  UNIQUE(target_type, target_id, approver_id, step),
+
+  FOREIGN KEY (requester_id) REFERENCES users(id),
+  FOREIGN KEY (approver_id) REFERENCES users(id),
+  FOREIGN KEY (delegate_id) REFERENCES users(id)
+);
+
+
+CREATE TABLE IF NOT EXISTS approval_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+  approval_id INTEGER NOT NULL,        -- approvals.id
+  target_type TEXT NOT NULL,           -- redundancy for 검색 최적화
+  target_id INTEGER NOT NULL,          -- redundancy for 검색 최적화
+
+  step INTEGER NOT NULL,               -- 해당 단계 (1차, 2차...)
+  action TEXT NOT NULL,                -- PENDING, APPROVED, REJECTED, SKIPPED 등
+  memo TEXT,                           -- 승인/반려/건너뜀 코멘트
+
+  actor_id INTEGER NOT NULL,           -- 실제 처리한 사람 (승인자 or 대리자)
+  performed_at TEXT DEFAULT CURRENT_TIMESTAMP,
+
+  prev_status TEXT,                    -- 이전 상태
+  new_status TEXT,                     -- 변경 후 상태
+
+  FOREIGN KEY (approval_id) REFERENCES approvals(id),
+  FOREIGN KEY (actor_id) REFERENCES users(id)
 );
