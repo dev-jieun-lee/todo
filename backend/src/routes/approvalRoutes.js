@@ -44,4 +44,10 @@ router.get(
   approvalController.getPositionLabel
 );
 
+//상세보기
+router.get(
+  "/:targetType/:targetId/detail",
+  approvalController.getApprovalDetail
+);
+
 module.exports = router;

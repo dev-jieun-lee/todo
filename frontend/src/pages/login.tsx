@@ -37,12 +37,61 @@ const Login = () => {
       }
     }
   };
+  // 테스트 계정 목록
+  const testUsers = {
+    leader: { username: "kimjj", password: "0" },
+    employee: { username: "syjeong", password: "0" },
+    manager: { username: "shincy", password: "0" },
+  };
+
+  // 테스트로그인
+  const handleTestLogin = async (type: keyof typeof testUsers) => {
+    try {
+      await logout();
+      const { username, password } = testUsers[type];
+      const res = await axios.post("/api/auth/login", { username, password });
+      const { token, user } = res.data;
+
+      login({
+        token,
+        username: user.username,
+        name: user.name,
+        role: user.role,
+      });
+      navigate("/");
+    } catch (err) {
+      console.error("❌ 테스트 계정 로그인 실패:", err);
+      alert("테스트 계정 로그인 실패");
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
       <div className="w-full max-w-md bg-white p-8 rounded-lg shadow-md">
         <h2 className="text-2xl font-bold text-center mb-6">그룹웨어 로그인</h2>
 
+        {/* 테스트로그인버튼 */}
+        <div className="grid grid-cols-3 gap-2 mb-6">
+          <button
+            className="bg-green-500 text-white py-2 rounded hover:bg-green-600 text-sm"
+            onClick={() => handleTestLogin("leader")}
+          >
+            👨‍💼 팀장 로그인
+          </button>
+          <button
+            className="bg-blue-500 text-white py-2 rounded hover:bg-blue-600 text-sm"
+            onClick={() => handleTestLogin("employee")}
+          >
+            👩‍💻 사원 로그인
+          </button>
+          <button
+            className="bg-purple-500 text-white py-2 rounded hover:bg-purple-600 text-sm"
+            onClick={() => handleTestLogin("manager")}
+          >
+            🧑‍🏫 부장 로그인
+          </button>
+        </div>
+        <div className="text-center text-gray-400 my-4">또는</div>
         <div className="mb-4">
           <label className="block text-sm text-gray-600 mb-1">아이디</label>
           <input

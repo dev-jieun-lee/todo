@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import ApprovalCard from "./ApprovalCard";
 import api from "../../utils/axiosInstance";
 import { toast } from "react-toastify";
-import type { ApprovalListItem } from "../../types/approval";
+import type { ApprovalItem, ApprovalListItem } from "../../types/approval";
 
 interface CommonCode {
   code: string;
@@ -15,6 +15,7 @@ interface ApprovalTabPanelProps {
   showActions?: boolean;
   onApprove?: (type: string, id: number) => void;
   onReject?: (type: string, id: number, memo: string) => void;
+  onSelect?: (item: ApprovalItem) => void;
 }
 
 export default function ApprovalTabPanel({
@@ -23,6 +24,7 @@ export default function ApprovalTabPanel({
   showActions = false,
   onApprove,
   onReject,
+  onSelect,
 }: ApprovalTabPanelProps) {
   const [targetTypes, setTargetTypes] = useState<CommonCode[]>([]);
   const [selectedType, setSelectedType] = useState<string>("ALL");
@@ -78,7 +80,6 @@ export default function ApprovalTabPanel({
           </button>
         ))}
       </div>
-
       {items.length === 0 ? (
         <p>현재 항목이 없습니다.</p>
       ) : (
@@ -92,6 +93,7 @@ export default function ApprovalTabPanel({
             dueDate={a.dueDate}
             data={a.data}
             showActions={showActions}
+            onClick={() => onSelect?.(a)} // ✅ 클릭 시 상세뷰 연동
             onApprove={
               showActions && onApprove
                 ? () => onApprove(a.targetType, a.targetId)

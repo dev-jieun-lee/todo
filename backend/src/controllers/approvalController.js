@@ -299,3 +299,35 @@ exports.getPositionLabel = (req, res) => {
     });
   });
 };
+
+// 상세 보기 API
+exports.getApprovalDetail = async (req, res) => {
+  const { targetType, targetId } = req.params;
+
+  try {
+    let data = null;
+
+    if (targetType === "vacation") {
+      data = await dbGet(
+        `SELECT start_date, end_date, type_code AS type_label FROM vacations WHERE id = ?`,
+        [targetId]
+      );
+    } else if (targetType === "kpi") {
+      data = await dbGet(`SELECT goal_title, period FROM kpis WHERE id = ?`, [
+        targetId,
+      ]);
+    } // 다른 유형도 여기에 추가 가능
+
+    if (!data) return res.status(404).json({ error: "상세 데이터 없음" });
+
+    res.json({
+      id: Number(targetId),
+      targetType,
+      targetId: Number(targetId),
+      data,
+    });
+  } catch (err) {
+    console.error("❌ 상세 조회 실패:", err);
+    res.status(500).json({ error: "상세 조회 실패" });
+  }
+};

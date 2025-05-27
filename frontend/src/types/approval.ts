@@ -54,6 +54,7 @@ export interface ApprovalCardProps {
   onApprove?: () => void; // 선택적으로
   onReject?: (memo: string) => void;
   showActions?: boolean;
+  onClick?: () => void;
 }
 
 export interface ApprovalItem {
@@ -68,3 +69,11 @@ export interface ApprovalItem {
 
 export type ApprovalListItem = ApprovalItem;
 export type ApprovalDetail = ApprovalItem;
+
+export interface ApprovalHistoryItem {
+  step: number;
+  action: string; // APPROVED, REJECTED, SKIPPED 등
+  memo?: string;
+  actor_name: string;
+  performed_at: string;
+}
