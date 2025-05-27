@@ -8,12 +8,13 @@ import type { ApprovalDetail, ApprovalHistoryItem } from "../../types/approval";
 interface Props {
   targetType: string;
   targetId: number;
-  showActions?: boolean;
+  commonCodeMap: Record<string, { code: string; label: string }[]>;
 }
 
 export default function UnifiedApprovalDetailInlineView({
   targetType,
   targetId,
+  commonCodeMap,
 }: Props) {
   const [detail, setDetail] = useState<ApprovalDetail | null>(null);
   const [history, setHistory] = useState<ApprovalHistoryItem[]>([]);
@@ -59,7 +60,11 @@ export default function UnifiedApprovalDetailInlineView({
       onApprove={handleApprove}
       onReject={handleReject}
     >
-      <ApprovalDetailContent targetType={targetType} data={detail.data} />
+      <ApprovalDetailContent
+        targetType={targetType}
+        data={detail.data}
+        commonCodeMap={commonCodeMap}
+      />
     </ApprovalDetailLayout>
   );
 }

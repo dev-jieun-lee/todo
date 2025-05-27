@@ -202,3 +202,19 @@ INSERT INTO common_codes (code_group, code, label, sort_order, active) VALUES
 ('APPROVAL_TARGET', 'PROJECT', '프로젝트 시작', 5, 1),
 ('APPROVAL_TARGET', 'TRANSFER', '인사이동 요청', 6, 1),
 ('APPROVAL_TARGET', 'DOCUMENT', '문서 결재', 7, 1);
+
+
+INSERT INTO common_codes (code_group, code, label, sort_order, active)
+VALUES
+  ('DOCUMENT_TYPE', 'DESC', '문서 유형 코드: 전자결재 신청서 종류를 정의', 0, 0),
+  ('DOCUMENT_TYPE', 'VACATION_REQUEST', '휴가신청서', 1, 1),
+  ('DOCUMENT_TYPE', 'EVENT_PAYMENT_REQUEST', '경조금 지급신청서', 2, 1),
+  ('DOCUMENT_TYPE', 'TRANSPORT_EXPENSE', '교통비 지출 품의서', 3, 1),
+  ('DOCUMENT_TYPE', 'DRIVER_USAGE', '대리운전 사용내역서', 4, 1),
+  ('DOCUMENT_TYPE', 'CORPORATE_SEAL', '법인인감 사용신청서', 5, 1),
+  ('DOCUMENT_TYPE', 'RECEIPT', '영수증', 6, 1),
+  ('DOCUMENT_TYPE', 'EMPLOYMENT_CERT', '재직(경력)증명서 신청서', 7, 1),
+  ('DOCUMENT_TYPE', 'ENTERTAINMENT_APPROVAL', '접대 사전 승인 신청서', 8, 1),
+  ('DOCUMENT_TYPE', 'BUSINESS_TRIP_REPORT', '출장보고서', 9, 1),
+  ('DOCUMENT_TYPE', 'CONDO_REQUEST', '콘도사용신청서', 10, 1),
+  ('DOCUMENT_TYPE', 'PLANT_DELIVERY', '화분배송신청서', 11, 1);

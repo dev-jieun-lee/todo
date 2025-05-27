@@ -75,8 +75,18 @@ CREATE TABLE IF NOT EXISTS vacations (
   status TEXT DEFAULT 'PENDING',                        -- 휴가 상태: 대기, 승인, 반려, 취소완료 등
   reason TEXT,                                      -- 휴가 신청 사유
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,    -- 신청일시
-  FOREIGN KEY(user_id) REFERENCES users(id)
+  approved_by              INTEGER,
+    approved_at              TEXT,
+    snapshot_department_code TEXT,
+    snapshot_position_code   TEXT,
+    snapshot_name            TEXT,
+    note                     TEXT,
+    FOREIGN KEY (
+        user_id
+    )
+    REFERENCES users (id)
 );
+
 
 -- 휴가 변경 이력 테이블
 CREATE TABLE IF NOT EXISTS vacation_history (
@@ -235,4 +245,25 @@ CREATE TABLE IF NOT EXISTS approval_history (
 
   FOREIGN KEY (approval_id) REFERENCES approvals(id),
   FOREIGN KEY (actor_id) REFERENCES users(id)
+);
+
+
+CREATE TABLE event_payment_requests (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,  -- 신청서 고유 ID
+    writer_id       INTEGER NOT NULL,                   -- 신청자 (users 테이블의 id 참조)
+    department      TEXT,                               -- 신청자의 부서명 (스냅샷 용도)
+    position        TEXT,                               -- 신청자의 직책 (스냅샷 용도)
+    name            TEXT,                               -- 신청자 이름 (스냅샷 용도)
+    employee_number TEXT,                               -- 신청자 사번 (스냅샷 용도)
+    event_type      TEXT NOT NULL,                      -- 경조사 유형 (결혼, 칠순, 자녀출산, 사망)
+    event_target    TEXT NOT NULL,                      -- 경조 대상 (본인, 자녀, 부모 등)
+    other_relation  TEXT,                               -- 경조 대상이 '기타'일 경우 관계 입력
+    event_date      TEXT,                               -- 사유 발생일 (경조사 실제 날짜)
+    address         TEXT,                               -- 화환 또는 조화 배송 받을 주소
+    amount          INTEGER NOT NULL,                   -- 경조금 신청 금액 (₩)
+    attachment      TEXT,                               -- 첨부된 증빙서류 파일명 또는 설명
+    created_at      TEXT DEFAULT CURRENT_TIMESTAMP,     -- 신청서 생성 일시 (자동 생성)
+    FOREIGN KEY (
+        writer_id
+    ) REFERENCES users (id)                             -- 신청자 참조: users 테이블
 );

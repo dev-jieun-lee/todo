@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "휴가 신청서",
+  "type": "object",
+  "properties": {
+    "휴가유형": {
+      "type": "string",
+      "title": "휴가 유형",
+      "enum": [
+        "연차",
+        "반차",
+        "병가",
+        "육아휴직",
+        "안식휴가",
+        "무급휴직",
+        "시차",
+        "기타"
+      ]
+    },
+    "시작일": {
+      "type": "string",
+      "format": "date",
+      "title": "시작일"
+    },
+    "종료일": {
+      "type": "string",
+      "format": "date",
+      "title": "종료일"
+    },
+    "시작시간": {
+      "type": "string",
+      "title": "시작 시간",
+      "pattern": "^([01]?[0-9]|2[0-3]):[0-5][0-9]$"
+    },
+    "종료시간": {
+      "type": "string",
+      "title": "종료 시간",
+      "pattern": "^([01]?[0-9]|2[0-3]):[0-5][0-9]$"
+    },
+    "단위": {
+      "type": "string",
+      "title": "기간 단위",
+      "enum": [
+        "하루",
+        "반차",
+        "시간 단위"
+      ]
+    },
+    "사유": {
+      "type": "string",
+      "title": "사유",
+      "maxLength": 200
+    },
+    "신청자부서코드": {
+      "type": "string",
+      "title": "신청 당시 부서 코드"
+    },
+    "신청자직책코드": {
+      "type": "string",
+      "title": "신청 당시 직책 코드"
+    },
+    "신청자이름": {
+      "type": "string",
+      "title": "신청 당시 이름"
+    },
+    "비고": {
+      "type": "string",
+      "title": "비고",
+      "maxLength": 200
+    }
+  },
+  "required": [
+    "휴가유형",
+    "시작일",
+    "단위",
+    "사유"
+  ]
+}

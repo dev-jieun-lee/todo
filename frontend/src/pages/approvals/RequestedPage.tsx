@@ -4,9 +4,24 @@ import UnifiedApprovalDetailInlineView from "../../components/approvals/UnifiedA
 import api from "../../utils/axiosInstance";
 import { toast } from "react-toastify";
 import type { ApprovalItem } from "../../types/approval";
+import type { CommonCode } from "../../types/CommonCode";
 
 export default function RequestedPage() {
   const [selectedItem, setSelectedItem] = useState<ApprovalItem | null>(null);
+  const [commonCodeMap, setCommonCodeMap] = useState<
+    Record<string, { code: string; label: string }[]>
+  >({});
+
+  useEffect(() => {
+    api.get("/common-codes/all").then((res) => {
+      const grouped: Record<string, { code: string; label: string }[]> = {};
+      res.data.forEach((c: CommonCode) => {
+        if (!grouped[c.group]) grouped[c.group] = [];
+        grouped[c.group].push({ code: c.code, label: c.label });
+      });
+      setCommonCodeMap(grouped);
+    });
+  }, []);
 
   useEffect(() => {
     api
@@ -36,7 +51,7 @@ export default function RequestedPage() {
           <UnifiedApprovalDetailInlineView
             targetType={selectedItem.targetType}
             targetId={selectedItem.targetId}
-            showActions={false}
+            commonCodeMap={commonCodeMap}
           />
         ) : (
           <p className="text-gray-500 text-sm">

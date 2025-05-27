@@ -1,5 +1,5 @@
 // src/components/approvals/ApprovalCard.tsx
-import { useNavigate } from "react-router-dom";
+//import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
@@ -54,9 +54,9 @@ const getSummaryText = (targetType: string, data: ApprovalData): string => {
   }
 };
 
-const getDetailLink = (targetType: string, targetId: number): string => {
-  return `/${targetType.toLowerCase()}/approve/${targetId}`;
-};
+// const getDetailLink = (targetType: string, targetId: number): string => {
+//   return `/${targetType.toLowerCase()}/approve/${targetId}`;
+// };
 
 function ApprovalCard({
   targetType,
@@ -68,8 +68,9 @@ function ApprovalCard({
   onApprove,
   onReject,
   showActions = true, // 기본값 true로 설정
+  onClick,
 }: ApprovalCardProps) {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
   const [rejectMemo, setRejectMemo] = useState("");
   const [typeLabelMap, setTypeLabelMap] = useState<Record<string, string>>({});
   const [approverPosition, setApproverPosition] = useState<string>("");
@@ -102,10 +103,25 @@ function ApprovalCard({
 
   const summary =
     data && targetType ? getSummaryText(targetType, data) : "(요약 정보 없음)";
-  const detailLink = targetId ? getDetailLink(targetType, targetId) : "/";
+  // const detailLink = targetId ? getDetailLink(targetType, targetId) : "/";
 
   return (
-    <Card className="w-full shadow-sm border rounded-xl p-4 space-y-3">
+    <Card
+      className="w-full shadow-sm border rounded-xl p-4 space-y-3 cursor-pointer hover:bg-gray-50"
+      onClick={() =>
+        onClick?.({
+          targetType,
+          targetId,
+          requesterName,
+          createdAt,
+          dueDate,
+          data,
+          onApprove,
+          onReject,
+        })
+      }
+    >
+      {" "}
       <CardContent className="space-y-2">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-semibold">
@@ -129,9 +145,9 @@ function ApprovalCard({
 
         {showActions && (
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => navigate(detailLink)}>
+            {/* <Button variant="outline" onClick={() => navigate(detailLink)}>
               상세 보기
-            </Button>
+            </Button> */}
             {onApprove && (
               <Button
                 className="bg-green-500 text-white hover:bg-green-600"

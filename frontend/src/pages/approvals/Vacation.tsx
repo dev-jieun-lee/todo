@@ -6,11 +6,8 @@ import LeaveSummaryCard from "../profile/LeaveSummaryCard";
 import api from "../../utils/axiosInstance";
 import { toast } from "react-toastify";
 import type { VacationDetail } from "../../types/types";
+import type { CommonCode } from "../../types/CommonCode";
 
-interface CommonCode {
-  code: string;
-  label: string;
-}
 const Vacation = () => {
   const [refreshFlag, setRefreshFlag] = useState(false);
   const [codeMap, setCodeMap] = useState<Record<string, string>>({});

@@ -9,11 +9,13 @@ interface Props {
   targetType: string;
   targetId: number;
   showActions?: boolean;
+  commonCodeMap: Record<string, { code: string; label: string }[]>;
 }
 
 export default function UnifiedApprovalDetailInlineView({
   targetType,
   targetId,
+  commonCodeMap,
 }: Props) {
   const [detail, setDetail] = useState<ApprovalDetail | null>(null);
   const [history, setHistory] = useState<ApprovalHistoryItem[]>([]);
@@ -21,7 +23,13 @@ export default function UnifiedApprovalDetailInlineView({
   useEffect(() => {
     api
       .get(`/approvals/${targetType.toLowerCase()}/${targetId}/detail`)
-      .then((res) => setDetail(res.data))
+      .then((res) => {
+        console.log(
+          "📦 UnifiedApprovalDetailInlineView.tsx.data (API 응답):",
+          res.data
+        ); // 여기를 가장 먼저 찍어보세요
+        setDetail(res.data);
+      })
       .catch(() => toast.error("상세 정보를 불러오지 못했습니다."));
 
     api
@@ -55,20 +63,19 @@ export default function UnifiedApprovalDetailInlineView({
   }
 
   return (
-    <div className="flex flex-col md:flex-row gap-4">
-      <div className="md:w-1/2">
-        {/* ApprovalCard 목록 (리스트는 ApprovalTabPanel에서 렌더됨) */}
-      </div>
-      <div className="md:w-1/2">
-        <ApprovalDetailLayout
-          title={`${targetType.toUpperCase()} 문서 상세`}
-          history={history}
-          onApprove={handleApprove}
-          onReject={handleReject}
-        >
-          <ApprovalDetailContent targetType={targetType} data={detail.data} />
-        </ApprovalDetailLayout>
-      </div>
+    <div className="w-full">
+      <ApprovalDetailLayout
+        title={`${targetType.toUpperCase()} 문서 상세`}
+        history={history}
+        onApprove={handleApprove}
+        onReject={handleReject}
+      >
+        <ApprovalDetailContent
+          targetType={targetType}
+          data={detail.data}
+          commonCodeMap={commonCodeMap}
+        />
+      </ApprovalDetailLayout>
     </div>
   );
 }

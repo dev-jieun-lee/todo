@@ -1,0 +1,6 @@
+| 역할         | 설명                                                                      |
+| ---------- | ----------------------------------------------------------------------- |
+| ① API 호출   | `/approvals/{type}/{id}/detail` 및 `/history`로부터 데이터 받아옴                 |
+| ② 승인/반려 처리 | 내부에서 `handleApprove`, `handleReject` 정의 후 `ApprovalDetailLayout`에 전달    |
+| ③ 본문 렌더링   | `<ApprovalDetailContent targetType={...} data={...} />`를 렌더링함           |
+| ⛳ 최종 뷰     | `ApprovalDetailContent` 내부에서 문서 유형별로 `<VacationDetailContent />` 등을 호출함 |

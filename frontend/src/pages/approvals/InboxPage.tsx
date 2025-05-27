@@ -4,13 +4,20 @@ import api from "../../utils/axiosInstance";
 import { toast } from "react-toastify";
 import { useEffect, useState } from "react";
 import type { ApprovalItem } from "../../types/approval";
+import useCommonCodeMap from "../../hooks/useCommonCodeMap";
 
 export default function InboxPage() {
+  const { commonCodeMap } = useCommonCodeMap([
+    "VACATION_TYPE",
+    "POSITION",
+    "DEPARTMENT",
+  ]);
+
   const [refreshKey, setRefreshKey] = useState(Date.now());
-  //const [approvals, setApprovals] = useState<ApprovalItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<ApprovalItem | null>(null);
 
   const reload = () => setRefreshKey(Date.now());
+
   useEffect(() => {
     api
       .get(`/approvals/pending-to-me?refreshKey=${refreshKey}`)
@@ -29,6 +36,7 @@ export default function InboxPage() {
       .post(`/approvals/${type.toLowerCase()}/${id}/approve`)
       .then(() => {
         toast.success("승인 완료");
+        setSelectedItem(null);
         reload();
       })
       .catch((err) => {
@@ -49,6 +57,7 @@ export default function InboxPage() {
         console.error("❌ 반려 에러:", err);
       });
   };
+
   return (
     <div className="flex flex-col md:flex-row gap-4 h-full">
       {/* 왼쪽 목록 */}
@@ -64,13 +73,15 @@ export default function InboxPage() {
           />
         </div>
       </div>
-      {/* 오른쪽: 선택된 문서 상세 보기 */}
+
+      {/* 오른쪽: 상세 보기 */}
       <div className="w-full lg:w-1/2 h-full">
         <div className="h-full overflow-y-auto bg-white border rounded-lg p-6">
           {selectedItem ? (
             <UnifiedApprovalDetailInlineView
               targetType={selectedItem.targetType}
               targetId={selectedItem.targetId}
+              commonCodeMap={commonCodeMap}
             />
           ) : (
             <p className="text-gray-500 text-sm">

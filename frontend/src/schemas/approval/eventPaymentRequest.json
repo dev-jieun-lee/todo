@@ -1,0 +1,156 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "경조금 지급신청서",
+  "type": "object",
+  "properties": {
+    "작성일": {
+      "type": "string",
+      "format": "date",
+      "title": "작성일자"
+    },
+    "부서": {
+      "type": "string",
+      "title": "부서"
+    },
+    "직책": {
+      "type": "string",
+      "title": "직책"
+    },
+    "성명": {
+      "type": "string",
+      "title": "성명"
+    },
+    "사번": {
+      "type": "string",
+      "title": "사번"
+    },
+    "사유발생일": {
+      "type": "string",
+      "format": "date",
+      "title": "사유 발생일"
+    },
+    "주소": {
+      "type": "string",
+      "title": "화환 및 조화 수령 주소"
+    },
+    "경조금액": {
+      "type": "number",
+      "title": "경조금 금액 (₩)",
+      "minimum": 0
+    },
+    "첨부서류": {
+      "type": "string",
+      "title": "첨부 서류",
+      "description": "증빙서류 명칭 입력"
+    },
+    "경조사유형": {
+      "type": "string",
+      "title": "경조사 유형",
+      "enum": [
+        "결혼",
+        "칠순",
+        "자녀출산",
+        "사망"
+      ]
+    },
+    "경조사대상": {
+      "type": "string",
+      "title": "경조사 대상",
+      "oneOf": [
+        {
+          "const": "본인",
+          "title": "본인"
+        },
+        {
+          "const": "자녀",
+          "title": "자녀"
+        },
+        {
+          "const": "배우자",
+          "title": "배우자"
+        },
+        {
+          "const": "본인형제자매",
+          "title": "본인 형제자매"
+        },
+        {
+          "const": "배우자형제자매",
+          "title": "배우자 형제자매"
+        },
+        {
+          "const": "본인부모",
+          "title": "본인 부모"
+        },
+        {
+          "const": "배우자부모",
+          "title": "배우자 부모"
+        },
+        {
+          "const": "본인조부모",
+          "title": "본인 조부모"
+        },
+        {
+          "const": "본인의조부모",
+          "title": "본인의 조부모"
+        },
+        {
+          "const": "배우자조부모",
+          "title": "배우자 조부모"
+        },
+        {
+          "const": "기타",
+          "title": "기타 (3촌 이내)"
+        }
+      ]
+    },
+    "기타관계": {
+      "type": "string",
+      "title": "기타 관계",
+      "description": "경조사대상이 '기타'일 때 입력",
+      "default": "",
+      "maxLength": 30
+    },
+    "결재선": {
+      "type": "object",
+      "title": "결재선",
+      "properties": {
+        "발신부": {
+          "type": "string",
+          "title": "발신부"
+        },
+        "담당": {
+          "type": "string",
+          "title": "담당"
+        },
+        "과장": {
+          "type": "string",
+          "title": "과장"
+        },
+        "팀장": {
+          "type": "string",
+          "title": "팀장"
+        },
+        "부서장": {
+          "type": "string",
+          "title": "부서장"
+        },
+        "대표이사": {
+          "type": "string",
+          "title": "대표이사"
+        }
+      }
+    }
+  },
+  "required": [
+    "작성일",
+    "부서",
+    "직책",
+    "성명",
+    "사번",
+    "사유발생일",
+    "주소",
+    "경조금액",
+    "경조사유형",
+    "경조사대상"
+  ]
+}

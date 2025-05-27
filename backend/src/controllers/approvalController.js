@@ -31,38 +31,100 @@ exports.approve = (req, res) => {
   const { targetType, targetId } = req.params;
   const userId = req.user.id;
 
-  const checkSql = `SELECT status, is_final FROM approvals WHERE target_type = ? AND target_id = ? AND approver_id = ?`;
+  console.log("🟢 승인 요청 시작:", { userId, targetType, targetId });
+
+  const checkSql = `
+    SELECT id, status, is_final, step
+    FROM approvals
+    WHERE LOWER(target_type) = LOWER(?) AND target_id = ? AND approver_id = ?
+  `;
   db.get(checkSql, [targetType, targetId, userId], (err, row) => {
     if (err) return res.status(500).json({ error: "사전 상태 확인 실패" });
     if (!row) return res.status(403).json({ error: "승인 권한 없음" });
     if (row.status !== "PENDING")
       return res.status(400).json({ error: `이미 처리됨 (${row.status})` });
 
-    const updateSql = `UPDATE approvals SET status = 'APPROVED', approved_at = datetime('now') WHERE target_type = ? AND target_id = ? AND approver_id = ?`;
-    db.run(updateSql, [targetType, targetId, userId], function (err2) {
-      if (err2) return res.status(500).json({ error: "승인 실패" });
+    const approvalId = row.id;
+    const step = row.step;
 
-      // 최종 승인일 경우 실제 항목 상태도 변경
-      if (row.is_final === 1) {
-        let updateTargetSql = null;
-        if (targetType === "vacation")
-          updateTargetSql = `UPDATE vacations SET status = 'APPROVED' WHERE id = ?`;
-        if (targetType === "kpi")
-          updateTargetSql = `UPDATE kpis SET status = 'APPROVED' WHERE id = ?`;
-        if (updateTargetSql) db.run(updateTargetSql, [targetId]);
+    const updateApprovalSql = `
+      UPDATE approvals
+      SET status = 'APPROVED', approved_at = datetime('now')
+      WHERE id = ?
+    `;
+    db.run(updateApprovalSql, [approvalId], function (err2) {
+      if (err2) {
+        console.error("❌ approvals 테이블 업데이트 실패", err2);
+        return res.status(500).json({ error: "승인 실패" });
       }
+      console.log("✅ approvals 상태 업데이트 완료:", approvalId);
 
+      // approval_history 기록
+      const insertApprovalHistory = `
+        INSERT INTO approval_history
+        (approval_id, target_type, target_id, step, action, memo, actor_id, prev_status, new_status)
+        VALUES (?, ?, ?, ?, 'APPROVE', '', ?, 'PENDING', 'APPROVED')
+      `;
+      db.run(
+        insertApprovalHistory,
+        [approvalId, targetType, targetId, step, userId],
+        function (err3) {
+          if (err3) console.error("❌ approval_history 기록 실패", err3);
+          else console.log("📘 approval_history 기록 완료:", this.lastID);
+        }
+      );
+
+      // 최종 승인일 경우 vacations 업데이트
+      if (row.is_final === 1 && targetType.toLowerCase() === "vacation") {
+        const selectVacationSql = `SELECT status, user_id FROM vacations WHERE id = ?`;
+        db.get(selectVacationSql, [targetId], (err4, vacationRow) => {
+          if (err4 || !vacationRow) {
+            console.warn("❗ vacation 레코드 없음");
+            return res.json({ success: true, warning: "vacation 상태 미갱신" });
+          }
+
+          const { status: oldStatus, user_id } = vacationRow;
+
+          // 1. vacations 테이블 업데이트
+          const updateVacationSql = `
+            UPDATE vacations
+            SET status = 'APPROVED', approved_by = ?, approved_at = datetime('now')
+            WHERE id = ?
+          `;
+          db.run(updateVacationSql, [userId, targetId], function (err5) {
+            if (err5) console.error("❌ vacations 상태 업데이트 실패", err5);
+            else console.log("✅ vacations 상태 업데이트 완료:", targetId);
+          });
+
+          // 2. vacation_history INSERT
+          const insertVacationHistory = `
+            INSERT INTO vacation_history
+            (vacation_id, user_id, action, old_value, new_value, memo, admin_id)
+            VALUES (?, ?, 'APPROVE', ?, 'APPROVED', '최종 승인', ?)
+          `;
+          db.run(
+            insertVacationHistory,
+            [targetId, user_id, oldStatus, userId],
+            function (err6) {
+              if (err6) console.error("❌ vacation_history 기록 실패", err6);
+              else console.log("📘 vacation_history 기록 완료:", this.lastID);
+            }
+          );
+        });
+      } else {
+        console.log(
+          "ℹ️ 최종 승인 아님 → vacation 상태/이력 변경 생략 (is_final:",
+          row.is_final,
+          ")"
+        );
+      }
       logSystemAction(
         req,
         req.user,
         LOG_ACTIONS.APPROVE,
         `${targetType} ${targetId} 승인`
       );
-      console.log("📤 [approve] 승인 완료 응답:", {
-        targetType,
-        targetId,
-        userId,
-      });
+
       res.json({ success: true });
     });
   });
@@ -77,6 +139,7 @@ exports.reject = (req, res) => {
   const checkSql = `SELECT status FROM approvals WHERE target_type = ? AND target_id = ? AND approver_id = ?`;
   db.get(checkSql, [targetType, targetId, userId], (err, row) => {
     if (err) return res.status(500).json({ error: "사전 상태 확인 실패" });
+    console.log("🔍 반려자 확인 결과:", row);
     if (!row) return res.status(403).json({ error: "반려 권한 없음" });
     if (row.status !== "PENDING")
       return res.status(400).json({ error: `이미 처리됨 (${row.status})` });
@@ -308,17 +371,64 @@ exports.getApprovalDetail = async (req, res) => {
     let data = null;
 
     if (targetType === "vacation") {
+      // 1. 기본 휴가 정보 + snapshot + employee_number 조인
       data = await dbGet(
-        `SELECT start_date, end_date, type_code AS type_label FROM vacations WHERE id = ?`,
+        `SELECT
+          v.start_date,
+          v.end_date,
+          v.type_code,
+          v.reason,
+          v.note,
+          v.created_at,
+          v.snapshot_name,
+          v.snapshot_department_code,
+          v.snapshot_position_code,
+          u.employee_number
+        FROM vacations v
+        LEFT JOIN users u ON v.user_id = u.id
+        WHERE v.id = ?`,
         [targetId]
       );
-    } else if (targetType === "kpi") {
+
+      if (data) {
+        // 2. LEADER 역할만 승인자로 조회
+        const approverRows = await dbAll(
+          `SELECT a.step, u.name, u.role
+           FROM approvals a
+           JOIN users u ON a.approver_id = u.id
+           WHERE a.target_type = 'vacation'
+             AND a.target_id = ?
+             AND u.role = 'LEADER'`,
+          [targetId]
+        );
+
+        const approvers = {
+          teamLead: null,
+          deptHead: null,
+        };
+
+        for (const row of approverRows) {
+          if (row.step === 1) approvers.teamLead = row.name;
+          else if (row.step === 2) approvers.deptHead = row.name;
+        }
+
+        data.approvers = approvers;
+      }
+    }
+
+    // 예: KPI, TODO 등 다른 유형
+    else if (targetType === "kpi") {
       data = await dbGet(`SELECT goal_title, period FROM kpis WHERE id = ?`, [
         targetId,
       ]);
-    } // 다른 유형도 여기에 추가 가능
+    }
 
-    if (!data) return res.status(404).json({ error: "상세 데이터 없음" });
+    if (!data) {
+      console.warn("⚠️ 상세 데이터 없음:", targetType, targetId);
+      return res.status(404).json({ error: "상세 데이터 없음" });
+    }
+
+    console.log("📄 상세 데이터 조회 결과:", data);
 
     res.json({
       id: Number(targetId),

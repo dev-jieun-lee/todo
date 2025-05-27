@@ -1,0 +1,131 @@
+.vacation-form {
+  font-family: "Noto Sans KR", sans-serif;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px;
+  border: 1px solid #000;
+  background: #fff;
+  overflow: hidden;
+  color: #000;
+}
+
+.form-title {
+  text-align: center;
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+.form-date {
+  text-align: right;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.approval-line {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  font-size: 13px;
+  box-sizing: border-box;
+  table-layout: fixed;
+}
+
+.approval-line th,
+.approval-line td {
+  border: 1px solid #000;
+  text-align: center;
+  padding: 6px 4px;
+  min-width: 60px;
+  vertical-align: middle;
+  word-break: break-word;
+}
+
+.approval-line td:first-child {
+  font-weight: bold;
+  width: 60px;
+  white-space: nowrap;
+}
+
+.form-body {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.left-box {
+  flex: 2;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.inline-info {
+  display: flex;
+  justify-content: flex-start;
+  gap: 40px;
+}
+
+.right-box {
+  flex: 1;
+  border-left: 1px solid #000;
+  padding-left: 12px;
+  font-size: 14px;
+}
+
+.vacation-type-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+}
+
+.vacation-type-list div {
+  white-space: nowrap;
+}
+
+.vacation-type-list .checked {
+  font-weight: bold;
+  text-decoration: underline;
+}
+
+.vacation-period label,
+.vacation-reason label {
+  font-weight: bold;
+  display: block;
+}
+
+.reason-box.no-border {
+  border: none;
+  background-color: transparent;
+}
+.note-section {
+  margin-top: 20px;
+  border: none;
+  background-color: transparent;
+}
+
+.note-section label {
+  font-weight: bold;
+}
+
+.note-box {
+  border: 1px solid #000;
+  min-height: 40px;
+  padding: 8px;
+  margin-top: 4px;
+  white-space: pre-wrap;
+  background-color: #fdfdfd;
+}
+
+.footer-notice {
+  margin-top: 30px;
+  font-size: 12px;
+  text-align: center;
+}
+
+.company-name {
+  margin-top: 8px;
+  text-align: center;
+  font-weight: bold;
+}

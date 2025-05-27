@@ -54,7 +54,7 @@ export interface ApprovalCardProps {
   onApprove?: () => void; // 선택적으로
   onReject?: (memo: string) => void;
   showActions?: boolean;
-  onClick?: () => void;
+  onClick?: (props: ApprovalCardProps) => void;
 }
 
 export interface ApprovalItem {
@@ -76,4 +76,28 @@ export interface ApprovalHistoryItem {
   memo?: string;
   actor_name: string;
   performed_at: string;
+}
+
+// 휴가 상세 보기용 데이터 타입 (결재 상세용)
+export interface VacationDetailData {
+  created_at?: string;
+  snapshot_department_label?: string;
+  employee_number?: string;
+  snapshot_position_label?: string;
+  snapshot_department_code: string;
+  snapshot_position_code: string;
+  snapshot_name?: string;
+  start_date?: string;
+  end_date?: string;
+  type_label?: string;
+  reason?: string;
+  note?: string;
+  type_code: string;
+  approvers: {
+    manager?: string;
+    partLead?: string;
+    teamLead?: string;
+    deptHead?: string;
+    ceo?: string;
+  };
 }

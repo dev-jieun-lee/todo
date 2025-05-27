@@ -3,11 +3,7 @@ import ApprovalCard from "./ApprovalCard";
 import api from "../../utils/axiosInstance";
 import { toast } from "react-toastify";
 import type { ApprovalItem, ApprovalListItem } from "../../types/approval";
-
-interface CommonCode {
-  code: string;
-  label: string;
-}
+import type { CommonCode } from "../../types/CommonCode";
 
 interface ApprovalTabPanelProps {
   title: string;
@@ -93,7 +89,7 @@ export default function ApprovalTabPanel({
             dueDate={a.dueDate}
             data={a.data}
             showActions={showActions}
-            onClick={() => onSelect?.(a)} // ✅ 클릭 시 상세뷰 연동
+            onClick={() => onSelect?.(a)}
             onApprove={
               showActions && onApprove
                 ? () => onApprove(a.targetType, a.targetId)
