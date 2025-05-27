@@ -3,8 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { Bell, UserCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import SessionTimer from "../components/SessionTimer";
+import { Menu } from "lucide-react"; // 꼭 추가
+import api from "../utils/axiosInstance";
 
-const Header = () => {
+const Header = ({ onMenuClick }: { onMenuClick?: () => void }) => {
   const { logout, username, role } = useUser();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -32,10 +34,28 @@ const Header = () => {
     };
   }, [menuOpen]);
 
+  const handleMenuClick = async (label: string, path?: string) => {
+    if (!path) return;
+
+    try {
+      await api.post("/log/menu-access", { label, path });
+    } catch (err) {
+      console.warn("❗ 메뉴 접근 로그 실패:", err);
+    }
+  };
   return (
     <header className="w-full bg-white shadow px-6 py-3 flex justify-between items-center border-b relative">
-      <h1 className="text-xl font-bold text-gray-800">그룹웨어</h1>
-
+      <button
+        onClick={() => handleMenuClick("홈", "/")}
+        className="text-2xl font-bold mb-4 block text-left px-4"
+      >
+        그룹웨어
+      </button>
+      {onMenuClick && (
+        <button onClick={onMenuClick} className="md:hidden">
+          <Menu className="w-6 h-6 text-gray-700" />
+        </button>
+      )}
       <div className="flex items-center gap-6 relative">
         <button
           onClick={() => alert("알림 기능은 아직 미구현입니다.")}

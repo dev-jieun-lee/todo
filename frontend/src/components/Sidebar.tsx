@@ -13,6 +13,7 @@ import {
   UserIcon,
   SettingsIcon,
 } from "./Icons";
+import { ChevronLeft, ChevronRight } from "lucide-react"; // 또는 원하는 아이콘
 
 const iconMap: Record<string, JSX.Element> = {
   DashboardIcon: <DashboardIcon />,
@@ -35,7 +36,15 @@ type MenuItem = {
   children?: MenuItem[];
 };
 
-const Sidebar = () => {
+const Sidebar = ({
+  isMobile,
+  sidebarOpen,
+  setSidebarOpen,
+}: {
+  isMobile: boolean;
+  sidebarOpen: boolean;
+  setSidebarOpen: (v: boolean) => void;
+}) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { username, role } = useUser();
@@ -43,6 +52,7 @@ const Sidebar = () => {
   const [filteredMenuItems, setFilteredMenuItems] = useState<MenuItem[]>([]);
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     const fetchMenus = async () => {
@@ -64,7 +74,7 @@ const Sidebar = () => {
             ),
           }));
 
-        console.log("👀 최종 메뉴:", visibleMenus);
+        //  console.log("최종 메뉴:", visibleMenus);
         setFilteredMenuItems(visibleMenus);
       } catch (err) {
         console.error("❌ 메뉴 로딩 실패:", err);
@@ -80,15 +90,15 @@ const Sidebar = () => {
     );
   };
 
-  const handleMenuClick = async (label: string, path: string) => {
+  const handleMenuClick = async (label: string, path?: string) => {
+    if (!path) return;
+
     try {
       await api.post("/log/menu-access", { label, path });
+      if (location.pathname !== path) navigate(path);
+      if (isMobile) setSidebarOpen(false);
     } catch (err) {
       console.warn("❗ 메뉴 접근 로그 실패:", err);
-    }
-
-    if (location.pathname !== path) {
-      navigate(path);
     }
   };
 
@@ -104,75 +114,122 @@ const Sidebar = () => {
   const displayedItems = filterMenuItems(filteredMenuItems);
 
   return (
-    <aside className="w-64 bg-white h-screen border-r px-6 py-6 shadow-sm overflow-y-auto">
-      <div className="text-xs text-gray-500 mb-2">환영합니다, {username}님</div>
-
+    <aside
+      className={`transition-all duration-300 z-50 h-full bg-white border-r shadow-sm
+    ${isMobile ? "fixed top-0 left-0 w-64" : collapsed ? "w-16" : "w-64"}
+    ${isMobile && !sidebarOpen ? "hidden" : ""}
+    overflow-y-auto
+  `}
+    >
+      {/* 접기 토글 */}
       <button
-        onClick={() => handleMenuClick("홈", "/")}
-        className="text-2xl font-bold mb-4 block text-left"
+        onClick={() => setCollapsed(!collapsed)}
+        className="mb-6 text-gray-600 hover:text-blue-600 p-2"
+        title={collapsed ? "메뉴 펼치기" : "메뉴 접기"}
       >
-        그룹웨어
+        {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
       </button>
 
-      <input
-        type="text"
-        placeholder="메뉴 검색..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        className="w-full px-3 py-2 mb-6 text-sm border rounded-md"
-      />
+      {/* 헤더 영역 */}
+      {!collapsed && (
+        <>
+          <div className="text-xs text-gray-500 mb-2 px-4">
+            환영합니다, {username}님
+          </div>
+          <input
+            type="text"
+            placeholder="메뉴 검색..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-3 py-2 mb-6 text-sm border rounded-md"
+          />
+        </>
+      )}
 
-      <nav className="flex flex-col gap-4">
+      {/* 메뉴 영역 */}
+      <nav className="flex flex-col gap-4 px-2">
         {displayedItems.map((item) =>
           item.children?.length ? (
-            <div key={item.label}>
+            <div key={item.label} className="relative group">
               <button
-                className={`w-full text-left text-sm font-semibold transition-colors duration-200 ${
-                  openMenus.includes(item.label)
-                    ? "text-blue-600"
-                    : "text-gray-600"
-                }`}
+                className="w-full text-left text-sm font-semibold flex items-center gap-2 px-2 py-2 hover:text-blue-600"
                 onClick={() => toggleMenu(item.label)}
+                title={collapsed ? item.label : undefined}
               >
-                <div className="flex items-center gap-2">
-                  {item.icon}
-                  {item.label}
-                </div>
+                {item.icon}
+                {!collapsed && item.label}
               </button>
-              {openMenus.includes(item.label) && (
-                <div className="flex flex-col gap-2 pl-6 mt-1">
-                  {item.children.map(
-                    (child) =>
-                      child.path && (
-                        <button
-                          key={child.path}
-                          onClick={() =>
-                            handleMenuClick(child.label, child.path!)
-                          }
-                          className={`text-left text-sm hover:text-blue-600 ${
-                            location.pathname.startsWith(child.path)
-                              ? "text-blue-600 font-medium"
-                              : "text-gray-800"
-                          }`}
-                        >
-                          {child.label}
-                        </button>
-                      )
+
+              {/* 하위 메뉴 분기 */}
+              {isMobile ? (
+                <div className="pl-4 mt-1 space-y-1">
+                  {item.children.map((child) =>
+                    typeof child.path === "string" ? (
+                      <button
+                        key={child.path}
+                        onClick={() => handleMenuClick(child.label, child.path)}
+                        className={`block w-full text-left text-sm hover:text-blue-600 ${
+                          location.pathname.startsWith(child.path)
+                            ? "text-blue-600 font-medium"
+                            : "text-gray-800"
+                        }`}
+                      >
+                        {child.label}
+                      </button>
+                    ) : null
                   )}
                 </div>
-              )}
+              ) : collapsed ? (
+                <div className="absolute left-full top-0 ml-2 w-48 bg-white border rounded shadow-md z-40 hidden group-hover:block">
+                  {item.children.map((child) =>
+                    child.path ? (
+                      <button
+                        key={child.path}
+                        onClick={() => handleMenuClick(child.label, child.path)}
+                        className={`block w-full text-left px-4 py-2 text-sm hover:bg-blue-50 ${
+                          location.pathname.startsWith(child.path)
+                            ? "text-blue-600 font-medium"
+                            : "text-gray-800"
+                        }`}
+                      >
+                        {child.label}
+                      </button>
+                    ) : null
+                  )}
+                </div>
+              ) : openMenus.includes(item.label) ? (
+                <div className="flex flex-col gap-2 pl-6 mt-1">
+                  {item.children.map((child) =>
+                    child.path ? (
+                      <button
+                        key={child.path}
+                        onClick={() => handleMenuClick(child.label, child.path)}
+                        className={`text-left text-sm hover:text-blue-600 ${
+                          location.pathname.startsWith(child.path)
+                            ? "text-blue-600 font-medium"
+                            : "text-gray-800"
+                        }`}
+                      >
+                        {child.label}
+                      </button>
+                    ) : null
+                  )}
+                </div>
+              ) : null}
             </div>
           ) : item.path ? (
             <button
               key={item.path}
-              onClick={() => handleMenuClick(item.label, item.path!)}
-              className={`text-left text-sm font-medium hover:text-blue-600 ${
+              onClick={() => handleMenuClick(item.label, item.path)}
+              className={`text-left text-sm font-medium hover:text-blue-600 flex items-center gap-2 px-2 py-2 ${
                 location.pathname.startsWith(item.path)
                   ? "text-blue-600"
                   : "text-gray-800"
               }`}
+              title={collapsed ? item.label : undefined}
             >
-              {item.icon} {item.label}
+              {item.icon}
+              {!collapsed && item.label}
             </button>
           ) : null
         )}
