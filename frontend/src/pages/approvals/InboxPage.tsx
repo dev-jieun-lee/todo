@@ -50,28 +50,34 @@ export default function InboxPage() {
       });
   };
   return (
-    <div className="flex flex-col md:flex-row gap-4">
-      <div className="md:w-1/2">
-        <ApprovalTabPanel
-          title="📬 내가 승인할 항목"
-          fetchUrl={`/approvals/pending-to-me?refreshKey=${refreshKey}`}
-          showActions={true}
-          onApprove={handleApprove}
-          onReject={handleReject}
-          onSelect={(item: ApprovalItem) => setSelectedItem(item)} // 상세 선택 연결
-        />
-      </div>
-      <div className="md:w-1/2">
-        {selectedItem ? (
-          <UnifiedApprovalDetailInlineView
-            targetType={selectedItem.targetType}
-            targetId={selectedItem.targetId}
+    <div className="flex flex-col md:flex-row gap-4 h-full">
+      {/* 왼쪽 목록 */}
+      <div className="md:w-1/2 h-full">
+        <div className="h-full overflow-y-auto bg-white border rounded-lg p-6">
+          <ApprovalTabPanel
+            title="📬 내가 승인할 항목"
+            fetchUrl={`/approvals/pending-to-me?refreshKey=${refreshKey}`}
+            showActions={true}
+            onApprove={handleApprove}
+            onReject={handleReject}
+            onSelect={(item: ApprovalItem) => setSelectedItem(item)}
           />
-        ) : (
-          <p className="text-gray-500 text-sm">
-            문서를 선택하면 상세 정보가 표시됩니다.
-          </p>
-        )}
+        </div>
+      </div>
+      {/* 오른쪽: 선택된 문서 상세 보기 */}
+      <div className="w-full lg:w-1/2 h-full">
+        <div className="h-full overflow-y-auto bg-white border rounded-lg p-6">
+          {selectedItem ? (
+            <UnifiedApprovalDetailInlineView
+              targetType={selectedItem.targetType}
+              targetId={selectedItem.targetId}
+            />
+          ) : (
+            <p className="text-gray-500 text-sm">
+              문서를 선택하면 상세 정보가 표시됩니다.
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );

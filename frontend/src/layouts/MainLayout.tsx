@@ -28,7 +28,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       <Header onMenuClick={() => setSidebarOpen(true)} />
-      <div className="flex flex-1 relative">
+      <div className="flex flex-1 overflow-hidden">
         {/* 모바일일 때만 backdrop 표시 */}
         {isMobile && sidebarOpen && (
           <div
@@ -44,8 +44,8 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
           setSidebarOpen={setSidebarOpen}
         />
 
-        <main className="flex-1 overflow-y-auto p-6 bg-gray-50">
-          {children}
+        <main className="flex-1 bg-gray-50 h-[calc(100vh-4rem)] overflow-hidden">
+          <div className="h-full overflow-y-auto p-6">{children}</div>
         </main>
       </div>
     </div>
