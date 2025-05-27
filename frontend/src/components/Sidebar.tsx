@@ -115,11 +115,11 @@ const Sidebar = ({
 
   return (
     <aside
-      className={`transition-all duration-300 z-50 h-full bg-white border-r shadow-sm
-    ${isMobile ? "fixed top-0 left-0 w-64" : collapsed ? "w-16" : "w-64"}
-    ${isMobile && !sidebarOpen ? "hidden" : ""}
-    overflow-y-auto
-  `}
+      className={`transition-all duration-300 z-50 bg-white border-r shadow-sm
+      ${isMobile ? "fixed top-0 left-0 w-64" : collapsed ? "w-16" : "w-64"}
+      ${isMobile && !sidebarOpen ? "hidden" : ""}
+      h-screen overflow-y-auto
+    `}
     >
       {/* 접기 토글 */}
       <button
