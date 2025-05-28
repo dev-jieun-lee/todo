@@ -12,44 +12,46 @@ exports.getApprovers = async (req, res) => {
 
   try {
     // 1. 현재 사용자 부서 코드 조회
-    const deptRow = await dbGet(
-      "SELECT department_code FROM users WHERE id = ?",
+    const userRow = await dbGet(
+      `SELECT department_code, position_code FROM users WHERE id = ?`,
       [userId]
     );
-    if (!deptRow) {
-      logSystemAction(
-        req,
-        req.user,
-        LOG_ACTIONS.ERROR,
-        "사용자 부서 조회 실패"
-      );
-      return res.status(500).json({ error: "사용자 부서 조회 실패" });
+    if (!userRow) {
+      logSystemAction(req, req.user, LOG_ACTIONS.ERROR, "사용자 정보 없음");
+      return res.status(500).json({ error: "사용자 정보 없음" });
     }
+    const { department_code, position_code } = userRow;
 
-    const userDept = deptRow.department_code;
-
-    // 2. 같은 부서 소속 결재자 목록 조회 + 직급명 포함
+    // 현재 직급의 sort_order 조회
+    const myLevelRow = await dbGet(
+      `SELECT sort_order FROM common_codes WHERE code_group = 'POSITION' AND code = ?`,
+      [position_code]
+    );
+    const mySortOrder = myLevelRow?.sort_order ?? 99;
+    // 상위 직급자만 추출 (sort_order < 내 직급)
     const sql = `
       SELECT u.id, u.name, u.position_code, c.label AS position_label
       FROM users u
-      LEFT JOIN common_codes c
-        ON c.code_group = 'POSITION'
-        AND c.code = u.position_code
+      JOIN common_codes c
+        ON c.code_group = 'POSITION' AND c.code = u.position_code
       WHERE u.status = 'ACTIVE'
         AND u.department_code = ?
         AND u.id != ?
-      ORDER BY u.position_code
+        AND c.sort_order < ?
+      ORDER BY c.sort_order ASC
     `;
-
-    const approvers = await dbAll(sql, [userDept, userId]);
+    const approvers = await dbAll(sql, [department_code, userId, mySortOrder]);
 
     logSystemAction(
       req,
       req.user,
       LOG_ACTIONS.READ,
-      `결재자 목록 조회: 부서 ${userDept}`
+      `결재자 자동 지정: ${approvers.length}명`
     );
-    res.json(approvers);
+    res.json({
+      approver_ids: approvers.map((a) => a.id),
+      approvers, // 상세 리스트도 같이
+    });
   } catch (err) {
     logSystemAction(
       req,

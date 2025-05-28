@@ -144,7 +144,6 @@ exports.reject = async (req, res) => {
       logSystemAction(req, req.user, LOG_ACTIONS.REJECT_FAIL, "반려 권한 없음");
       return res.status(403).json({ error: "반려 권한 없음" });
     }
-
     if (row.status !== "PENDING") {
       logSystemAction(
         req,
@@ -156,8 +155,7 @@ exports.reject = async (req, res) => {
     }
 
     await dbRun(
-      `UPDATE approvals SET status = 'REJECTED', memo = ?, approved_at = datetime('now')
-       WHERE target_type = ? AND target_id = ? AND approver_id = ?`,
+      `UPDATE approvals SET status = 'REJECTED', memo = ?, approved_at = datetime('now') WHERE target_type = ? AND target_id = ? AND approver_id = ?`,
       [memo, targetType, targetId, userId]
     );
 
@@ -174,13 +172,6 @@ exports.reject = async (req, res) => {
       LOG_ACTIONS.REJECT,
       `${targetType} ${targetId} 반려`
     );
-
-    console.log("📤 [reject] 반려 완료 응답:", {
-      targetType,
-      targetId,
-      userId,
-      memo,
-    });
     res.json({ success: true });
   } catch (err) {
     console.error("❌ 반려 처리 중 오류:", err);
@@ -191,5 +182,245 @@ exports.reject = async (req, res) => {
       `반려 처리 중 예외 발생: ${err.message}`
     );
     res.status(500).json({ error: "반려 실패" });
+  }
+};
+
+// 4. 승인 이력 조회
+exports.getApprovalHistory = async (req, res) => {
+  const { targetType, targetId } = req.params;
+  try {
+    const rows = await dbAll(
+      `SELECT a.*, u.name AS approver_name FROM approvals a JOIN users u ON a.approver_id = u.id WHERE target_type = ? AND target_id = ? ORDER BY step ASC, approved_at ASC`,
+      [targetType, targetId]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error("❌ 이력 조회 실패:", err);
+    res.status(500).json({ error: "이력 조회 실패" });
+  }
+};
+
+// 5. 내가 요청한 승인 목록 조회
+exports.getRequestedApprovals = async (req, res) => {
+  const userId = req.user.id;
+  const { target_type } = req.query;
+
+  let sql = `
+    SELECT
+      a.id, a.target_type, a.target_id, a.created_at, a.due_date,
+      u.name AS requester_name
+    FROM approvals a
+    JOIN users u ON a.requester_id = u.id
+    WHERE a.requester_id = ?
+  `;
+  const params = [userId];
+
+  if (target_type) {
+    sql += ` AND target_type = ?`;
+    params.push(target_type);
+  }
+  sql += ` ORDER BY a.created_at DESC`;
+
+  try {
+    const rows = await dbAll(sql, params);
+    const enrichedRows = await Promise.all(
+      rows.map(async (row) => {
+        let data = null;
+        if ((row.target_type || "").toLowerCase() === "vacation") {
+          data = await dbGet(
+            `SELECT start_date, end_date, type_code AS type_label FROM vacations WHERE id = ?`,
+            [row.target_id]
+          );
+        } else if ((row.target_type || "").toLowerCase() === "kpi") {
+          data = await dbGet(
+            `SELECT goal_title, period FROM kpis WHERE id = ?`,
+            [row.target_id]
+          );
+        }
+        return {
+          id: row.id,
+          targetType: (row.target_type || "").toUpperCase(),
+          targetId: row.target_id,
+          requesterName: row.requester_name,
+          createdAt: row.created_at,
+          dueDate: row.due_date,
+          data,
+        };
+      })
+    );
+    res.json(enrichedRows);
+  } catch (err) {
+    console.error("❌ 내가 요청한 승인 목록 조회 실패:", err);
+    res.status(500).json({ error: "조회 실패" });
+  }
+};
+
+// 6. 내가 승인할 항목 목록 조회
+exports.getPendingToMe = async (req, res) => {
+  const userId = req.user.id;
+  const { target_type } = req.query;
+
+  let sql = `
+    SELECT a.*, u.name AS requester_name
+    FROM approvals a
+    JOIN users u ON a.requester_id = u.id
+    WHERE a.approver_id = ? AND a.status = 'PENDING'
+  `;
+  const params = [userId];
+
+  if (target_type) {
+    sql += ` AND LOWER(target_type) = ?`;
+    params.push(target_type.toLowerCase());
+  }
+  sql += ` ORDER BY created_at ASC`;
+
+  try {
+    const rows = await dbAll(sql, params);
+    const enriched = await Promise.all(
+      rows.map(async (row) => {
+        let data = null;
+        if (row.target_type === "vacation") {
+          data = await dbGet(
+            `SELECT start_date, end_date, type_code AS type_label FROM vacations WHERE id = ?`,
+            [row.target_id]
+          );
+        } else if (row.target_type === "kpi") {
+          data = await dbGet(
+            `SELECT goal_title, period FROM kpis WHERE id = ?`,
+            [row.target_id]
+          );
+        }
+        return {
+          id: row.id,
+          targetType: row.target_type.toUpperCase(),
+          targetId: row.target_id,
+          requesterName: row.requester_name,
+          createdAt: row.created_at,
+          dueDate: row.due_date,
+          data,
+        };
+      })
+    );
+    res.json(enriched);
+  } catch (err) {
+    console.error("❌ 승인 목록 조회 실패:", err);
+    res.status(500).json({ error: "조회 실패" });
+  }
+};
+
+// 7. 결재자 직급 정보 조회
+exports.getPositionLabel = async (req, res) => {
+  const targetId = req.params.targetId;
+  try {
+    const row = await dbGet(
+      `SELECT dept.label AS department_label, pos.label AS position_label
+       FROM approvals a
+       JOIN users u ON a.approver_id = u.id
+       LEFT JOIN common_codes dept ON u.department_code = dept.code
+       LEFT JOIN common_codes pos ON u.position_code = pos.code
+       WHERE a.target_id = ?
+       LIMIT 1`,
+      [targetId]
+    );
+
+    if (!row) {
+      logSystemAction(req, req.user, LOG_ACTIONS.READ_FAIL, "결재자 정보 없음");
+      return res.status(404).json({ error: "결재자 정보 없음" });
+    }
+
+    const positionLabel = row.position_label || "(직급 없음)";
+    const departmentLabel = row.department_label || "(부서 없음)";
+    const combinedLabel = `${departmentLabel} ${positionLabel}`;
+
+    res.json({
+      department_label: departmentLabel,
+      position_label: positionLabel,
+      full_label: combinedLabel,
+    });
+  } catch (err) {
+    console.error("❌ 승인자 부서/직급 조회 실패:", err);
+    res.status(500).json({ error: "결재자 정보 조회 실패" });
+  }
+};
+// 8. 상세 보기 API
+exports.getApprovalDetail = async (req, res) => {
+  const { targetType, targetId } = req.params;
+  try {
+    let data = null;
+
+    if (targetType === "vacation") {
+      // 휴가 상세 정보 조회 (snapshot 값 포함)
+      data = await dbGet(
+        `SELECT v.start_date, v.end_date, v.type_code, v.reason, v.note, v.created_at,
+                v.snapshot_name, v.snapshot_department_code, v.snapshot_position_code, u.employee_number
+         FROM vacations v
+         LEFT JOIN users u ON v.user_id = u.id
+         WHERE v.id = ?`,
+        [targetId]
+      );
+
+      if (data) {
+        // 승인자 목록 조회 (승인 테이블 + 사용자 정보 + 직책 라벨)
+        const approverRows = await dbAll(
+          `SELECT a.step, u.name, u.position_code, cc.label AS position_label
+           FROM approvals a
+           JOIN users u ON a.approver_id = u.id
+           LEFT JOIN common_codes cc ON cc.code_group = 'POSITION' AND cc.code = u.position_code
+           WHERE a.target_type = 'vacation' AND a.target_id = ?
+           ORDER BY a.step ASC`,
+          [targetId]
+        );
+
+        // approvers 구조 생성: 직책에 따라 역할 필드 지정
+        const approvers = {};
+        for (const row of approverRows) {
+          switch (row.position_code) {
+            case "DEPHEAD": // 파트장
+              approvers.partLead = `${row.position_label} ${row.name}`;
+              break;
+            case "LEAD": // 팀장
+              approvers.teamLead = `${row.position_label} ${row.name}`;
+              break;
+            case "DIR": // 부장
+            case "EVP": // 상무
+              approvers.deptHead = `${row.position_label} ${row.name}`;
+              break;
+            case "CEO": // 대표
+              approvers.ceo = `${row.position_label} ${row.name}`;
+              break;
+            default:
+              // 그 외 직책은 manager로 간주 (최초 1회만 할당)
+              if (!approvers.manager) {
+                approvers.manager = `${row.position_label} ${row.name}`;
+              }
+          }
+        }
+
+        // 데이터에 approvers 필드 포함
+        data.approvers = approvers;
+      }
+    } else if (targetType === "kpi") {
+      // KPI 문서 상세
+      data = await dbGet(`SELECT goal_title, period FROM kpis WHERE id = ?`, [
+        targetId,
+      ]);
+    }
+
+    // 데이터가 없으면 404 반환
+    if (!data) {
+      logSystemAction(req, req.user, LOG_ACTIONS.READ_FAIL, "상세 데이터 없음");
+      return res.status(404).json({ error: "상세 데이터 없음" });
+    }
+
+    // 최종 응답
+    res.json({
+      id: Number(targetId),
+      targetType,
+      targetId: Number(targetId),
+      data,
+    });
+  } catch (err) {
+    console.error("❌ 상세 조회 실패:", err);
+    res.status(500).json({ error: "상세 조회 실패" });
   }
 };

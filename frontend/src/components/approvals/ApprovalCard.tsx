@@ -53,11 +53,6 @@ const getSummaryText = (targetType: string, data: ApprovalData): string => {
     return "(요약 정보 오류)";
   }
 };
-
-// const getDetailLink = (targetType: string, targetId: number): string => {
-//   return `/${targetType.toLowerCase()}/approve/${targetId}`;
-// };
-
 function ApprovalCard({
   targetType,
   targetId,
@@ -67,14 +62,12 @@ function ApprovalCard({
   data,
   onApprove,
   onReject,
-  showActions = true, // 기본값 true로 설정
+  showActions = true,
   onClick,
 }: ApprovalCardProps) {
-  // const navigate = useNavigate();
   const [rejectMemo, setRejectMemo] = useState("");
   const [typeLabelMap, setTypeLabelMap] = useState<Record<string, string>>({});
-  const [approverPosition, setApproverPosition] = useState<string>("");
-
+  const [approverLabel, setApproverLabel] = useState<string>("");
   useEffect(() => {
     api
       .get("/common-codes?group=APPROVAL_TARGET")
@@ -89,21 +82,37 @@ function ApprovalCard({
   }, []);
 
   useEffect(() => {
-    if (!targetId) return;
+    if (!targetId || !targetType) return;
 
     api
-      .get(`/approvals/position-label/${targetId}`)
+      .get(`/approvals/${targetType.toLowerCase()}/${targetId}/detail`)
       .then((res) => {
-        setApproverPosition(res.data?.position_label || "");
+        const approvers = res.data?.data?.approvers || {};
+
+        const roleLabelMap: Record<string, string> = {
+          manager: "담당",
+          partLead: "파트장",
+          teamLead: "팀장",
+          deptHead: "부서장",
+          ceo: "대표",
+        };
+
+        const labelList = Object.entries(approvers)
+          .filter(([, name]) => name)
+          .map(([key, name]) => {
+            const label = roleLabelMap[key] || key;
+            return `${label}: ${name}`;
+          });
+
+        setApproverLabel(labelList.join(" / "));
       })
       .catch(() => {
-        console.warn("승인자 직급 정보를 불러오지 못했습니다.");
+        console.warn("결재자 정보 불러오기 실패");
       });
-  }, [targetId]);
+  }, [targetId, targetType]);
 
   const summary =
     data && targetType ? getSummaryText(targetType, data) : "(요약 정보 없음)";
-  // const detailLink = targetId ? getDetailLink(targetType, targetId) : "/";
 
   return (
     <Card
@@ -121,7 +130,6 @@ function ApprovalCard({
         })
       }
     >
-      {" "}
       <CardContent className="space-y-2">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-semibold">
@@ -136,20 +144,14 @@ function ApprovalCard({
           {summary || "(데이터 없음 또는 미지원 유형)"}
         </p>
 
-        {approverPosition && (
+        {approverLabel && (
           <p className="text-sm text-gray-500 italic">
-            🔒 결재 라인:{" "}
-            <span className="font-medium">
-              {departmentLabel} {positionLabel} ({approverName})
-            </span>
+            🔒 결재 라인: <span className="font-medium">{approverLabel}</span>
           </p>
         )}
 
         {showActions && (
           <div className="flex items-center gap-2">
-            {/* <Button variant="outline" onClick={() => navigate(detailLink)}>
-              상세 보기
-            </Button> */}
             {onApprove && (
               <Button
                 className="bg-green-500 text-white hover:bg-green-600"

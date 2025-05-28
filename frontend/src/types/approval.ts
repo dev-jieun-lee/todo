@@ -93,11 +93,5 @@ export interface VacationDetailData {
   reason?: string;
   note?: string;
   type_code: string;
-  approvers: {
-    manager?: string;
-    partLead?: string;
-    teamLead?: string;
-    deptHead?: string;
-    ceo?: string;
-  };
+  approvers: Record<string, string>;
 }

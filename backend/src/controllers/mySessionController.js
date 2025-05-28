@@ -8,6 +8,27 @@ const {
 } = require("../utils/handleError");
 const { LOG_ACTIONS } = require("../utils/logActions");
 
+exports.getMySessions = async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const sessions = await dbAll(
+      "SELECT token, expires_at, created_at FROM refresh_tokens WHERE user_id = ? ORDER BY created_at DESC",
+      [userId]
+    );
+
+    res.json(sessions);
+  } catch (err) {
+    logSystemAction(
+      req,
+      req.user,
+      LOG_ACTIONS.ERROR,
+      `세션 목록 조회 실패: ${err.message}`
+    );
+    res.status(500).json({ error: "세션 목록을 불러오지 못했습니다." });
+  }
+};
+
 exports.deleteMySession = async (req, res) => {
   const userId = req.user.id;
   const token = req.params.token;

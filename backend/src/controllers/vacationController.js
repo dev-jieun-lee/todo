@@ -41,11 +41,12 @@ exports.applyVacation = async (req, res) => {
     end_time,
     duration_unit,
     reason,
+    approver_ids = [],
   } = req.body;
 
   try {
     const userRow = await dbGet(
-      `SELECT name, department_code, position_code, team_code FROM users WHERE id = ?`,
+      `SELECT name, department_code, position_code FROM users WHERE id = ?`,
       [user.id]
     );
 
@@ -54,7 +55,7 @@ exports.applyVacation = async (req, res) => {
       return res.status(500).json({ error: "신청자 정보 없음" });
     }
 
-    const { name, department_code, position_code, team_code } = userRow;
+    const { name, department_code, position_code } = userRow;
 
     const overlapping = await findOverlappingVacation(
       user.id,
@@ -97,33 +98,15 @@ exports.applyVacation = async (req, res) => {
       [vacationId, user.id, reason || null]
     );
 
-    const candidates = await dbAll(
-      `SELECT id, position_code FROM users WHERE team_code = ? AND status = 'ACTIVE'`,
-      [team_code]
-    );
+    for (let i = 0; i < approver_ids.length; i++) {
+      const isFinal = i === approver_ids.length - 1 ? 1 : 0;
+      const step = i + 1;
 
-    const getApprover = (priorityList) =>
-      priorityList
-        .map((code) => candidates.find((u) => u.position_code === code))
-        .find((u) => u);
-
-    const step1 = getApprover(["LEAD", "DEPHEAD", "CM", "MGR"]);
-    const step2 = getApprover(
-      ["DIR", "EVP"].filter((code) => code !== step1?.position_code)
-    );
-
-    const approvers = [
-      step1 && { approver_id: step1.id, step: 1, is_final: step2 ? 0 : 1 },
-      step2 && { approver_id: step2.id, step: 2, is_final: 1 },
-    ].filter(Boolean);
-
-    for (const { approver_id, step, is_final } of approvers) {
       await dbRun(
         `INSERT INTO approvals (target_type, target_id, requester_id, approver_id, step, status, is_final)
          VALUES ('VACATION', ?, ?, ?, ?, 'PENDING', ?)`,
-        [vacationId, user.id, approver_id, step, is_final]
+        [vacationId, user.id, approver_ids[i], step, isFinal]
       );
-      console.log(`✅ step ${step} 결재자 등록: user_id=${approver_id}`);
     }
 
     logSystemAction(

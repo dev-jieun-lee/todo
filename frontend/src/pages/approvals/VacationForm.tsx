@@ -25,9 +25,10 @@ const VacationForm: React.FC<VacationFormProps> = ({
   vacations,
 }) => {
   const [types, setTypes] = useState<{ code: string; label: string }[]>([]);
-  // const [approvers, setApprovers] = useState<
-  //   { id: number; name: string; position_label: string }[]
-  // >([]);
+  const [approvers, setApprovers] = useState<
+    { id: number; name: string; position_label: string }[]
+  >([]);
+
   const [form, setForm] = useState<VacationFormState>({
     type_code: "ANNUAL",
     start_date: "",
@@ -58,7 +59,9 @@ const VacationForm: React.FC<VacationFormProps> = ({
 
     api
       .get("/user/approvers")
-      // .then((res) => setApprovers(res.data))
+      .then((res) => {
+        setApprovers(res.data); // 전체 정보 저장
+      })
       .catch((err) => {
         toast.error("결재자 목록 불러오기 실패");
         console.error("결재자 목록 API 실패:", err);
@@ -125,7 +128,7 @@ const VacationForm: React.FC<VacationFormProps> = ({
       duration_unit,
       start_time,
       end_time,
-      approver_id: form.approver_id,
+      approver_ids: approvers.map((a) => a.id),
     };
 
     try {
@@ -261,6 +264,18 @@ const VacationForm: React.FC<VacationFormProps> = ({
           onChange={(e) => setForm({ ...form, reason: e.target.value })}
         />
       </div>
+      {approvers.length > 0 && (
+        <div className="bg-gray-50 border p-4 rounded text-sm">
+          <p className="font-medium mb-2">자동 지정된 결재자:</p>
+          <ul className="list-disc pl-5 space-y-1">
+            {approvers.map((a, idx) => (
+              <li key={a.id}>
+                {idx + 1}차: {a.name} ({a.position_label})
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <button
         type="submit"
