@@ -12,10 +12,9 @@ export const checkAccessByScope = (
   scopeCode?: string
 ): boolean => {
   const map: Record<string, RoleType[]> = {
-    ALL: ["ADMIN", "USER", "HR", "LEADER"],
+    ALL: ["ADMIN", "USER", "HR"],
     ADMIN_ONLY: ["ADMIN"],
     HR_ONLY: ["HR"],
-    LEADER_ONLY: ["LEADER"],
     CEO_ONLY: ["ADMIN"], // 대표는 ADMIN 권한으로 판단 시
   };
 

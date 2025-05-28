@@ -1,27 +1,45 @@
-const Todo = require("../models/todoModel");
+const { dbGet, dbAll, dbRun } = require("../utils/dbHelpers");
 const {
   handleDbError,
   logWarning,
   logSystemAction,
 } = require("../utils/handleError");
 const { LOG_ACTIONS, LOG_ACTION_LABELS } = require("../utils/logActions");
+const Todo = require("../models/todoModel");
 
-exports.getTodos = (req, res) => {
-  Todo.getAllTodos((err, rows) => {
-    if (err) return handleDbError(res, "할 일 목록 조회", err);
+exports.getTodos = async (req, res) => {
+  try {
+    const rows = await dbAll("SELECT * FROM todos ORDER BY id DESC", []);
     res.json(rows);
-  });
+  } catch (err) {
+    logSystemAction(
+      req,
+      req.user,
+      LOG_ACTIONS.TODO_VIEW_FAIL,
+      `할 일 조회 실패: ${err.message}`
+    );
+    return res.status(500).json({ error: "할 일 목록 조회 실패" });
+  }
 };
 
-exports.createTodo = (req, res) => {
+exports.createTodo = async (req, res) => {
   const { title } = req.body;
   if (!title) {
-    logWarning("할 일 등록 실패 - title 누락");
+    logSystemAction(
+      req,
+      req.user,
+      LOG_ACTIONS.TODO_CREATE_FAIL,
+      "할 일 등록 실패 - title 누락"
+    );
     return res.status(400).json({ error: "title is required" });
   }
 
-  Todo.createTodo(title, (err, newTodo) => {
-    if (err) return handleDbError(res, "할 일 등록", err);
+  try {
+    const result = await dbRun(
+      "INSERT INTO todos (title, is_done) VALUES (?, 0)",
+      [title]
+    );
+    const newTodo = { id: result.lastID, title, is_done: 0 };
 
     logSystemAction(
       req,
@@ -31,15 +49,23 @@ exports.createTodo = (req, res) => {
     );
 
     res.status(201).json(newTodo);
-  });
+  } catch (err) {
+    logSystemAction(
+      req,
+      req.user,
+      LOG_ACTIONS.TODO_CREATE_FAIL,
+      `예외 발생: ${err.message}`
+    );
+    return res.status(500).json({ error: "할 일 등록 실패" });
+  }
 };
 
-exports.updateTodo = (req, res) => {
+exports.updateTodo = async (req, res) => {
   const { id } = req.params;
   const { is_done } = req.body;
 
-  Todo.updateTodo(id, is_done, (err) => {
-    if (err) return handleDbError(res, "할 일 수정", err);
+  try {
+    await dbRun("UPDATE todos SET is_done = ? WHERE id = ?", [is_done, id]);
 
     logSystemAction(
       req,
@@ -49,14 +75,22 @@ exports.updateTodo = (req, res) => {
     );
 
     res.json({ message: "Updated" });
-  });
+  } catch (err) {
+    logSystemAction(
+      req,
+      req.user,
+      LOG_ACTIONS.TODO_UPDATE_FAIL,
+      `예외 발생: ${err.message}`
+    );
+    return res.status(500).json({ error: "할 일 수정 실패" });
+  }
 };
 
-exports.deleteTodo = (req, res) => {
+exports.deleteTodo = async (req, res) => {
   const { id } = req.params;
 
-  Todo.deleteTodo(id, (err) => {
-    if (err) return handleDbError(res, "할 일 삭제", err);
+  try {
+    await dbRun("DELETE FROM todos WHERE id = ?", [id]);
 
     logSystemAction(
       req,
@@ -66,5 +100,13 @@ exports.deleteTodo = (req, res) => {
     );
 
     res.json({ message: "Deleted" });
-  });
+  } catch (err) {
+    logSystemAction(
+      req,
+      req.user,
+      LOG_ACTIONS.TODO_DELETE_FAIL,
+      `예외 발생: ${err.message}`
+    );
+    return res.status(500).json({ error: "할 일 삭제 실패" });
+  }
 };

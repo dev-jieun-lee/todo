@@ -139,7 +139,9 @@ function ApprovalCard({
         {approverPosition && (
           <p className="text-sm text-gray-500 italic">
             🔒 결재 라인:{" "}
-            <span className="font-medium">{approverPosition}</span>
+            <span className="font-medium">
+              {departmentLabel} {positionLabel} ({approverName})
+            </span>
           </p>
         )}
 

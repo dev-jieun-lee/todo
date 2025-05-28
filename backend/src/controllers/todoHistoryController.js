@@ -1,4 +1,4 @@
-const History = require("../models/todoHistoryModel");
+const { dbAll } = require("../utils/dbHelpers");
 const {
   handleDbError,
   logWarning,
@@ -6,16 +6,24 @@ const {
 } = require("../utils/handleError");
 const { LOG_ACTIONS, LOG_ACTION_LABELS } = require("../utils/logActions");
 
-exports.getAllByUser = (req, res) => {
+exports.getAllByUser = async (req, res) => {
   const userId = req.query.user_id;
 
   if (!userId) {
-    logWarning("히스토리 조회 실패 - user_id 누락");
+    logSystemAction(
+      req,
+      req.user,
+      LOG_ACTIONS.HISTORY_VIEW_FAIL,
+      "히스토리 조회 실패 - user_id 누락"
+    );
     return res.status(400).json({ error: "user_id is required" });
   }
 
-  History.getAllByUser(userId, (err, rows) => {
-    if (err) return handleDbError(res, "히스토리 조회", err);
+  try {
+    const rows = await dbAll(
+      "SELECT * FROM todo_history WHERE user_id = ? ORDER BY created_at DESC",
+      [userId]
+    );
 
     logSystemAction(
       req,
@@ -25,5 +33,13 @@ exports.getAllByUser = (req, res) => {
     );
 
     res.json(rows);
-  });
+  } catch (err) {
+    logSystemAction(
+      req,
+      req.user,
+      LOG_ACTIONS.HISTORY_VIEW_FAIL,
+      `예외 발생: ${err.message}`
+    );
+    return res.status(500).json({ error: "히스토리 조회 실패" });
+  }
 };

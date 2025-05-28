@@ -25,9 +25,9 @@ const VacationForm: React.FC<VacationFormProps> = ({
   vacations,
 }) => {
   const [types, setTypes] = useState<{ code: string; label: string }[]>([]);
-  const [approvers, setApprovers] = useState<
-    { id: number; name: string; position_label: string }[]
-  >([]);
+  // const [approvers, setApprovers] = useState<
+  //   { id: number; name: string; position_label: string }[]
+  // >([]);
   const [form, setForm] = useState<VacationFormState>({
     type_code: "ANNUAL",
     start_date: "",
@@ -58,7 +58,7 @@ const VacationForm: React.FC<VacationFormProps> = ({
 
     api
       .get("/user/approvers")
-      .then((res) => setApprovers(res.data))
+      // .then((res) => setApprovers(res.data))
       .catch((err) => {
         toast.error("결재자 목록 불러오기 실패");
         console.error("결재자 목록 API 실패:", err);
@@ -247,22 +247,9 @@ const VacationForm: React.FC<VacationFormProps> = ({
       )}
 
       <div>
-        <label className="block text-sm font-medium mb-1">결재자 지정</label>
-        <select
-          className="border px-3 py-2 rounded w-60"
-          value={form.approver_id ?? ""}
-          onChange={(e) =>
-            setForm({ ...form, approver_id: Number(e.target.value) })
-          }
-          required
-        >
-          <option value="">선택하세요</option>
-          {approvers.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.position_label}: {a.name}
-            </option>
-          ))}
-        </select>
+        <p className="text-sm text-gray-500 italic">
+          ※ 결재자는 부서별 직급 기준으로 자동 지정됩니다.
+        </p>
       </div>
 
       <div>

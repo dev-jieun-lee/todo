@@ -1,16 +1,14 @@
 require("dotenv").config();
-const db = require("../config/db");
-const { findUserByUsername, findAllUsers } = require("../models/userModel");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const { formatToKstString, getKstDate } = require("../utils/time");
+const { formatToKstString } = require("../utils/time");
 const {
   saveRefreshToken,
   findRefreshToken,
   deleteRefreshToken,
   deleteAllTokensByUserId,
 } = require("../models/refreshTokenModel");
-
+const { findUserByUsername } = require("../models/userModel");
 const {
   handleDbError,
   logEvent,
@@ -18,8 +16,8 @@ const {
   logError,
   logSystemAction,
 } = require("../utils/handleError");
-
 const { LOG_ACTIONS, LOG_ACTION_LABELS } = require("../utils/logActions");
+const { dbGet, dbAll, dbRun } = require("../utils/dbHelpers");
 
 const SECRET_KEY = process.env.SECRET_KEY;
 
@@ -27,7 +25,7 @@ const login = (req, res) => {
   const { username, password } = req.body;
 
   try {
-    findUserByUsername(username, (err, user) => {
+    findUserByUsername(username, async (err, user) => {
       if (err) {
         handleDbError(res, "로그인 - 사용자 조회", err);
         logSystemAction(
@@ -50,7 +48,7 @@ const login = (req, res) => {
         return res.status(401).json({ error: "존재하지 않는 사용자명입니다." });
       }
 
-      bcrypt.compare(password, user.password, (err, isMatch) => {
+      bcrypt.compare(password, user.password, async (err, isMatch) => {
         if (err || !isMatch) {
           logWarning(`로그인 실패: 비밀번호 불일치 (${username})`);
           logSystemAction(
@@ -69,7 +67,6 @@ const login = (req, res) => {
           username: user.username,
           role: user.role,
         };
-
         const accessToken = jwt.sign(payload, SECRET_KEY, { expiresIn: "30m" });
         const refreshToken = jwt.sign(payload, SECRET_KEY, {
           expiresIn: "14d",
@@ -84,47 +81,40 @@ const login = (req, res) => {
         );
         const createdAtKST = formatToKstString(now);
 
-        // 기존 Refresh Token 삭제 (1인 1토큰 정책 적용)
-        deleteAllTokensByUserId(user.id, (deleteErr) => {
-          if (deleteErr) {
-            logError("기존 Refresh Token 삭제 실패", deleteErr);
-          } else {
-            logEvent(`기존 Refresh Token 삭제 완료 (ID: ${user.id})`);
-          }
+        try {
+          await deleteAllTokensByUserId(user.id);
+          logEvent(`기존 Refresh Token 삭제 완료 (ID: ${user.id})`);
+        } catch (deleteErr) {
+          logError("기존 Refresh Token 삭제 실패", deleteErr);
+        }
 
-          // 새 Refresh Token 저장
-          saveRefreshToken(
+        try {
+          await saveRefreshToken(
             user.id,
             refreshToken,
             expiresAtKST,
-            createdAtKST,
-            (err) => {
-              if (err) {
-                logError("Refresh Token 저장 실패", err);
-              } else {
-                logEvent(`Refresh Token 저장 완료 (ID: ${user.id})`);
-              }
-            }
+            createdAtKST
           );
+          logEvent(`Refresh Token 저장 완료 (ID: ${user.id})`);
+        } catch (err2) {
+          logError("Refresh Token 저장 실패", err2);
+        }
 
-          // 클라이언트에 Refresh Token을 httpOnly 쿠키로 전달
-          res.cookie("refreshToken", refreshToken, {
-            httpOnly: true,
-            secure: false, // 실제 운영 시에는 true (HTTPS) 권장
-            sameSite: "strict",
-            maxAge: 14 * 24 * 60 * 60 * 1000, // 14일
-          });
+        res.cookie("refreshToken", refreshToken, {
+          httpOnly: true,
+          secure: false, // 운영환경에서는 true 권장
+          sameSite: "strict",
+          maxAge: 14 * 24 * 60 * 60 * 1000,
+        });
 
-          // Access Token과 사용자 정보 반환
-          return res.json({
-            token: accessToken,
-            user: {
-              id: user.id,
-              username: user.username,
-              name: user.name,
-              role: user.role,
-            },
-          });
+        return res.json({
+          token: accessToken,
+          user: {
+            id: user.id,
+            username: user.username,
+            name: user.name,
+            role: user.role,
+          },
         });
       });
     });
@@ -145,7 +135,6 @@ const login = (req, res) => {
 const logout = (req, res) => {
   console.log("🧪 [서버] 받은 쿠키:", req.cookies);
   const refreshToken = req.cookies.refreshToken;
-
   if (refreshToken) {
     deleteRefreshToken(refreshToken, (err) => {
       if (err) logError("토큰 삭제 실패", err);

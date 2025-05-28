@@ -1,19 +1,17 @@
+const { dbAll } = require("../utils/dbHelpers");
+const { logSystemAction } = require("../utils/handleError");
+const { LOG_ACTIONS } = require("../utils/logActions");
 const { getAllMenus } = require("../models/menuModel");
-
-/**
- * 메뉴 트리 구조로 변환
- */
+// 메뉴 트리 구조로 변환
 const buildMenuTree = (flatMenus) => {
   const map = new Map();
   const tree = [];
 
-  // 1. id 기준으로 Map 생성 + children 초기화
   for (const item of flatMenus) {
     item.children = [];
     map.set(item.id, item);
   }
 
-  // 2. parent_id 기준으로 트리 구조 만들기
   for (const item of flatMenus) {
     if (item.parent_id === null) {
       tree.push(item);
@@ -26,29 +24,34 @@ const buildMenuTree = (flatMenus) => {
       }
     }
   }
-  //console.log("🧪 최종 트리 구조:");
-  //console.dir(tree, { depth: null });
+
   return tree;
 };
 
-/**
- * GET /api/menus
- */
-exports.getMenus = (req, res) => {
-  getAllMenus((err, rows) => {
-    if (err) {
-      console.error("❌ 메뉴 조회 실패:", err.message);
-      return res.status(500).json({ error: "메뉴 조회 실패" });
-    }
-    // console.log("📊 menus 응답 데이터 수:", rows.length);
-    // console.table(
-    //   rows.map((r) => ({
-    //     id: r.id,
-    //     label: r.label,
-    //     parent: r.parent_id,
-    //   }))
-    // );
+//GET /api/menus
+exports.getMenus = async (req, res) => {
+  try {
+    const rows = await dbAll(
+      `SELECT * FROM menus WHERE active = 1 ORDER BY sort_order ASC`,
+      []
+    );
     const tree = buildMenuTree(rows);
+
+    logSystemAction(
+      req,
+      req.user ?? null,
+      LOG_ACTIONS.MENU_LOOKUP,
+      `메뉴 목록 조회 (${rows.length}건)`
+    );
     res.json(tree);
-  });
+  } catch (err) {
+    console.error("❌ 메뉴 조회 실패:", err.message);
+    logSystemAction(
+      req,
+      req.user ?? null,
+      LOG_ACTIONS.MENU_LOOKUP_FAIL,
+      `예외 발생: ${err.message}`
+    );
+    res.status(500).json({ error: "메뉴 조회 실패" });
+  }
 };

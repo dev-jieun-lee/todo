@@ -1,4 +1,5 @@
-const db = require("../config/db");
+// controllers/sessionController.js
+const { dbAll } = require("../utils/dbHelpers");
 const { deleteAllTokensByUserId } = require("../models/refreshTokenModel");
 const { findUserById, findAllUsers } = require("../models/userModel");
 const {
@@ -11,7 +12,7 @@ const {
 const { LOG_ACTIONS, LOG_ACTION_LABELS } = require("../utils/logActions");
 
 // 강제 로그아웃 함수
-exports.forceLogout = (req, res) => {
+exports.forceLogout = async (req, res) => {
   const { user_id } = req.body;
 
   if (!user_id) {
@@ -19,11 +20,8 @@ exports.forceLogout = (req, res) => {
     return res.status(400).json({ error: "user_id 누락" });
   }
 
-  deleteAllTokensByUserId(user_id, (err) => {
-    if (err) {
-      logError("강제 로그아웃 실패", err);
-      return res.status(500).json({ error: "강제 로그아웃 실패" });
-    }
+  try {
+    await deleteAllTokensByUserId(user_id);
 
     const adminUser = {
       id: req.user?.id || null,
@@ -50,30 +48,36 @@ exports.forceLogout = (req, res) => {
     return res.json({
       message: "해당 사용자의 모든 세션이 강제 로그아웃되었습니다.",
     });
-  });
+  } catch (err) {
+    logError("강제 로그아웃 실패", err);
+    return res.status(500).json({ error: "강제 로그아웃 실패" });
+  }
 };
 
 // 전체 사용자 세션 조회 함수
 exports.getActiveSessions = (req, res) => {
-  findAllUsers((err, users) => {
+  findAllUsers(async (err, users) => {
     if (err) return handleDbError(res, "세션 사용자 조회", err);
 
-    const results = [];
-    let completed = 0;
-
-    users.forEach((user) => {
-      db.all(
-        "SELECT * FROM refresh_tokens WHERE user_id = ?",
-        [user.id],
-        (err, tokens) => {
-          if (err) logError("세션 토큰 조회", err);
-          results.push({ user, tokens });
-          completed++;
-          if (completed === users.length) {
-            res.json(results);
+    try {
+      const results = await Promise.all(
+        users.map(async (user) => {
+          try {
+            const tokens = await dbAll(
+              "SELECT * FROM refresh_tokens WHERE user_id = ?",
+              [user.id]
+            );
+            return { user, tokens };
+          } catch (tokenErr) {
+            logError("세션 토큰 조회 실패", tokenErr);
+            return { user, tokens: [] };
           }
-        }
+        })
       );
-    });
+      res.json(results);
+    } catch (err2) {
+      logError("세션 전체 조회 실패", err2);
+      return res.status(500).json({ error: "세션 전체 조회 실패" });
+    }
   });
 };

@@ -1,8 +1,8 @@
-const db = require("../config/db");
+const { dbGet, dbAll } = require("../utils/dbHelpers");
 const { logSystemAction } = require("../utils/handleError");
 const { LOG_ACTIONS } = require("../utils/logActions");
 
-exports.getApprovers = (req, res) => {
+exports.getApprovers = async (req, res) => {
   const userId = req.user?.id;
 
   if (!userId) {
@@ -10,11 +10,13 @@ exports.getApprovers = (req, res) => {
     return res.status(400).json({ error: "사용자 정보가 없습니다." });
   }
 
-  // 1. 현재 사용자 부서 코드 조회
-  const deptSql = `SELECT department_code FROM users WHERE id = ?`;
-  db.get(deptSql, [userId], (err, row) => {
-    if (err || !row) {
-      console.error("부서 조회 실패:", err);
+  try {
+    // 1. 현재 사용자 부서 코드 조회
+    const deptRow = await dbGet(
+      "SELECT department_code FROM users WHERE id = ?",
+      [userId]
+    );
+    if (!deptRow) {
       logSystemAction(
         req,
         req.user,
@@ -24,7 +26,7 @@ exports.getApprovers = (req, res) => {
       return res.status(500).json({ error: "사용자 부서 조회 실패" });
     }
 
-    const userDept = row.department_code;
+    const userDept = deptRow.department_code;
 
     // 2. 같은 부서 소속 결재자 목록 조회 + 직급명 포함
     const sql = `
@@ -39,19 +41,22 @@ exports.getApprovers = (req, res) => {
       ORDER BY u.position_code
     `;
 
-    db.all(sql, [userDept, userId], (err2, rows) => {
-      if (err2) {
-        console.error("결재자 목록 조회 실패:", err2);
-        logSystemAction(req, req.user, LOG_ACTIONS.ERROR, "결재자 조회 실패");
-        return res.status(500).json({ error: "결재자 조회 실패" });
-      }
+    const approvers = await dbAll(sql, [userDept, userId]);
 
-      console.log(
-        `[결재자 목록 조회] 부서: ${userDept} - 사용자: ${req.user.username}`
-      );
-      console.log(`[결재자 결과]`, rows);
-      logSystemAction(req, req.user, LOG_ACTIONS.READ, "결재자 목록 조회");
-      res.json(rows);
-    });
-  });
+    logSystemAction(
+      req,
+      req.user,
+      LOG_ACTIONS.READ,
+      `결재자 목록 조회: 부서 ${userDept}`
+    );
+    res.json(approvers);
+  } catch (err) {
+    logSystemAction(
+      req,
+      req.user,
+      LOG_ACTIONS.ERROR,
+      `결재자 조회 실패: ${err.message}`
+    );
+    return res.status(500).json({ error: "결재자 조회 실패" });
+  }
 };
