@@ -5,7 +5,7 @@ import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { useState, useEffect } from "react";
 import api from "../../utils/axiosInstance";
-import { toast } from "react-toastify";
+import useCommonCodeMap from "../../hooks/useCommonCodeMap";
 import type {
   ApprovalCardProps,
   ApprovalData,
@@ -53,6 +53,7 @@ const getSummaryText = (targetType: string, data: ApprovalData): string => {
     return "(요약 정보 오류)";
   }
 };
+
 function ApprovalCard({
   targetType,
   targetId,
@@ -62,24 +63,36 @@ function ApprovalCard({
   data,
   onApprove,
   onReject,
-  showActions = true,
   onClick,
-}: ApprovalCardProps) {
+  approval,
+  currentUserId,
+}: ApprovalCardProps & {
+  approval: {
+    status: string;
+    step: number;
+    current_pending_step: number | null;
+    approver_id: number;
+  };
+  currentUserId: number;
+}) {
   const [rejectMemo, setRejectMemo] = useState("");
-  const [typeLabelMap, setTypeLabelMap] = useState<Record<string, string>>({});
   const [approverLabel, setApproverLabel] = useState<string>("");
-  useEffect(() => {
-    api
-      .get("/common-codes?group=APPROVAL_TARGET")
-      .then((res) => {
-        const map: Record<string, string> = {};
-        res.data.forEach((item: { code: string; label: string }) => {
-          map[item.code] = item.label;
-        });
-        setTypeLabelMap(map);
-      })
-      .catch(() => toast.error("승인 대상 코드 불러오기 실패"));
-  }, []);
+
+  const { commonCodeMap } = useCommonCodeMap(["APPROVAL_TARGET"]);
+
+  const showActions =
+    approval.status === "PENDING" &&
+    approval.step === approval.current_pending_step &&
+    approval.approver_id === currentUserId;
+
+  console.log("🧪 승인 버튼 조건 검사", {
+    status: approval.status,
+    step: approval.step,
+    current_pending_step: approval.current_pending_step,
+    approver_id: approval.approver_id,
+    currentUserId,
+    showActions,
+  });
 
   useEffect(() => {
     if (!targetId || !targetType) return;
@@ -90,11 +103,9 @@ function ApprovalCard({
         const approvers = res.data?.data?.approvers || {};
 
         const roleLabelMap: Record<string, string> = {
-          manager: "담당",
           partLead: "파트장",
           teamLead: "팀장",
           deptHead: "부서장",
-          ceo: "대표",
         };
 
         const labelList = Object.entries(approvers)
@@ -127,13 +138,18 @@ function ApprovalCard({
           data,
           onApprove,
           onReject,
+          approval,
+          currentUserId,
+          showActions,
         })
       }
     >
       <CardContent className="space-y-2">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-semibold">
-            {typeLabelMap[targetType.toUpperCase()] || targetType}
+            {commonCodeMap["APPROVAL_TARGET"]?.find(
+              (c) => c.code === targetType.toUpperCase()
+            )?.label || targetType}
           </h3>
           <Badge variant="outline">신청자: {requesterName}</Badge>
         </div>

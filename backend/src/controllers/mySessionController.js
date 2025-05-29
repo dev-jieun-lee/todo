@@ -23,7 +23,8 @@ exports.getMySessions = async (req, res) => {
       req,
       req.user,
       LOG_ACTIONS.ERROR,
-      `세션 목록 조회 실패: ${err.message}`
+      `세션 목록 조회 실패: ${err.message}`,
+      "error"
     );
     res.status(500).json({ error: "세션 목록을 불러오지 못했습니다." });
   }
@@ -44,17 +45,20 @@ exports.deleteMySession = async (req, res) => {
         req,
         req.user,
         LOG_ACTIONS.SESSION_DELETE_FAIL,
-        `삭제 실패: 세션 없음 (토큰: ${token})`
+        `삭제 실패: 세션 없음 (토큰: ${token})`,
+        "warn"
       );
       return res.status(404).json({ error: "해당 세션이 존재하지 않음" });
     }
 
     logEvent(`사용자(${userId})가 세션 삭제: ${token}`);
+
     logSystemAction(
       req,
       req.user,
       LOG_ACTIONS.SESSION_DELETE,
-      `세션 삭제: ${token}`
+      `세션 삭제: ${token}`,
+      "info"
     );
 
     res.json({ message: "세션이 삭제되었습니다." });
@@ -63,7 +67,8 @@ exports.deleteMySession = async (req, res) => {
       req,
       req.user,
       LOG_ACTIONS.SESSION_DELETE_FAIL,
-      `예외 발생: ${err.message}`
+      `예외 발생: ${err.message}`,
+      "error"
     );
     return res.status(500).json({ error: "세션 삭제 중 오류 발생" });
   }
@@ -80,11 +85,13 @@ exports.deleteAllExceptCurrent = async (req, res) => {
     );
 
     logEvent(`사용자(${userId})가 현재 세션 제외 ${result.changes}개 삭제`);
+
     logSystemAction(
       req,
       req.user,
       LOG_ACTIONS.SESSION_DELETE_OTHERS,
-      `현재 세션 제외 ${result.changes}개 삭제`
+      `현재 세션 제외 ${result.changes}개 삭제`,
+      "info"
     );
 
     res.json({ message: `${result.changes}개의 세션이 삭제되었습니다.` });
@@ -93,7 +100,8 @@ exports.deleteAllExceptCurrent = async (req, res) => {
       req,
       req.user,
       LOG_ACTIONS.SESSION_DELETE_OTHERS_FAIL,
-      `예외 발생: ${err.message}`
+      `예외 발생: ${err.message}`,
+      "error"
     );
     return res.status(500).json({ error: "다른 세션 삭제 중 오류 발생" });
   }

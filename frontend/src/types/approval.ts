@@ -51,10 +51,18 @@ export interface ApprovalCardProps {
   createdAt: string;
   dueDate?: string;
   data: ApprovalData;
-  onApprove?: () => void; // 선택적으로
+  onApprove?: () => void;
   onReject?: (memo: string) => void;
-  showActions?: boolean;
   onClick?: (props: ApprovalCardProps) => void;
+
+  approval: {
+    status: string;
+    step: number;
+    current_pending_step: number | null;
+    approver_id: number;
+  };
+  currentUserId: number;
+  showActions?: boolean;
 }
 
 export interface ApprovalItem {
@@ -65,6 +73,10 @@ export interface ApprovalItem {
   createdAt: string;
   dueDate?: string;
   data: ApprovalData;
+  status: string;
+  step: number;
+  current_pending_step: number | null;
+  approver_id: number;
 }
 
 export type ApprovalListItem = ApprovalItem;
@@ -72,10 +84,13 @@ export type ApprovalDetail = ApprovalItem;
 
 export interface ApprovalHistoryItem {
   step: number;
-  action: string; // APPROVED, REJECTED, SKIPPED 등
-  memo?: string;
+  action: string;
+  memo: string;
+  actor_id: number;
   actor_name: string;
   performed_at: string;
+  position_label?: string;
+  department_label?: string;
 }
 
 // 휴가 상세 보기용 데이터 타입 (결재 상세용)

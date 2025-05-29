@@ -2,35 +2,18 @@ import { useEffect, useState } from "react";
 import api from "../../utils/axiosInstance";
 import { toast } from "react-toastify";
 import { handleApiError } from "../../utils/handleErrorFront";
+import useCommonCodeMap from "../../hooks/useCommonCodeMap";
 import type { ApprovalVacation } from "../../types/types";
 
 const Vacations = () => {
   const [vacations, setVacations] = useState<ApprovalVacation[]>([]);
-  const [codeMap, setCodeMap] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    Promise.all([
-      api.get("/common-codes?group=VACATION_TYPE"),
-      api.get("/common-codes?group=APPROVAL_STATUS"),
-      api.get("/common-codes?group=POSITION"),
-      api.get("/common-codes?group=DEPARTMENT"),
-      api.get("/common-codes?group=DURATION_UNIT"),
-    ])
-      .then(([typeRes, statusRes, posRes, deptRes, durRes]) => {
-        const map: Record<string, string> = {};
-        [
-          ...typeRes.data,
-          ...statusRes.data,
-          ...posRes.data,
-          ...deptRes.data,
-          ...durRes.data,
-        ].forEach((c) => (map[c.code] = c.label));
-        setCodeMap(map);
-      })
-      .catch((err) => {
-        handleApiError(err, "공통 코드 불러오기 실패");
-      });
-  }, []);
+  const { commonCodeMap } = useCommonCodeMap([
+    "VACATION_TYPE",
+    "APPROVAL_STATUS",
+    "POSITION",
+    "DEPARTMENT",
+    "DURATION_UNIT",
+  ]);
 
   const fetchVacations = async () => {
     try {
@@ -67,9 +50,10 @@ const Vacations = () => {
     fetchVacations();
   }, []);
 
-  useEffect(() => {
-    console.log("📦 휴가 목록:", vacations);
-  }, [vacations]);
+  const getLabel = (group: string, code: string | undefined) =>
+    code
+      ? commonCodeMap[group]?.find((c) => c.code === code)?.label || code
+      : "-";
 
   return (
     <div className="p-6">
@@ -93,7 +77,7 @@ const Vacations = () => {
               <td className="p-2">
                 {(v.name ?? "-") + " (" + (v.username ?? "-") + ")"}
               </td>
-              <td className="p-2">{codeMap[v.type_code] || v.type_code}</td>
+              <td className="p-2">{getLabel("VACATION_TYPE", v.type_code)}</td>
               <td className="p-2">
                 {v.start_date} ~ {v.end_date}
                 {v.duration_unit === "HOUR" && v.start_time && v.end_time && (
@@ -108,16 +92,17 @@ const Vacations = () => {
                 )}
                 {v.duration_unit === "FULL" && (
                   <div className="text-xs text-gray-400">
-                    ({codeMap[v.duration_unit] || "하루"})
+                    ({getLabel("DURATION_UNIT", v.duration_unit)})
                   </div>
                 )}
               </td>
-              <td className="p-2">{codeMap[v.status] || v.status}</td>
+              <td className="p-2">{getLabel("APPROVAL_STATUS", v.status)}</td>
               <td className="p-2">
                 {v.approver_name
-                  ? `${v.approver_name} (${
-                      codeMap[v.approver_position || ""] || "-"
-                    }, ${codeMap[v.approver_dept || ""] || "-"})`
+                  ? `${v.approver_name} (${getLabel(
+                      "POSITION",
+                      v.approver_position
+                    )} / ${getLabel("DEPARTMENT", v.approver_dept)})`
                   : "-"}
               </td>
               <td className="p-2">

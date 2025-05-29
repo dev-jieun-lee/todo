@@ -50,11 +50,13 @@ exports.getMyProfile = async (req, res) => {
     }
 
     logEvent(`사용자(${row.username}) 내 정보 조회`);
+
     logSystemAction(
       req,
       userInfo,
       LOG_ACTIONS.PROFILE_VIEW,
-      "내 정보 조회 수행"
+      "내 정보 조회 수행",
+      "info"
     );
 
     res.json(row);
@@ -85,7 +87,8 @@ exports.getLeaveSummary = async (req, res) => {
       req,
       req.user ?? null,
       LOG_ACTIONS.PROFILE_LEAVE_SUMMARY_FAIL,
-      `예외 발생: ${err.message}`
+      `예외 발생: ${err.message}`,
+      "error"
     );
     res.status(500).json({ error: "요약 조회 실패" });
   }

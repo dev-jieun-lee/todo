@@ -2,6 +2,7 @@ const { dbAll } = require("../utils/dbHelpers");
 const { logSystemAction } = require("../utils/handleError");
 const { LOG_ACTIONS } = require("../utils/logActions");
 const { getAllMenus } = require("../models/menuModel");
+
 // 메뉴 트리 구조로 변환
 const buildMenuTree = (flatMenus) => {
   const map = new Map();
@@ -41,16 +42,17 @@ exports.getMenus = async (req, res) => {
       req,
       req.user ?? null,
       LOG_ACTIONS.MENU_LOOKUP,
-      `메뉴 목록 조회 (${rows.length}건)`
+      `메뉴 목록 조회 (${rows.length}건)`,
+      "info"
     );
     res.json(tree);
   } catch (err) {
-    console.error("❌ 메뉴 조회 실패:", err.message);
     logSystemAction(
       req,
       req.user ?? null,
       LOG_ACTIONS.MENU_LOOKUP_FAIL,
-      `예외 발생: ${err.message}`
+      `예외 발생: ${err.message}`,
+      "error"
     );
     res.status(500).json({ error: "메뉴 조회 실패" });
   }

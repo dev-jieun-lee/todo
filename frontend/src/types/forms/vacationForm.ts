@@ -9,5 +9,4 @@ export interface VacationFormState {
   start_time: string;
   end_time: string;
   duration_unit: string;
-  approver_id: number | null;
 }

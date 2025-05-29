@@ -5,8 +5,10 @@ import { toast } from "react-toastify";
 import { useEffect, useState } from "react";
 import type { ApprovalItem } from "../../types/approval";
 import useCommonCodeMap from "../../hooks/useCommonCodeMap";
+import { useUser } from "../../contexts/useUser";
 
 export default function InboxPage() {
+  const { id: currentUserId } = useUser();
   const { commonCodeMap } = useCommonCodeMap([
     "VACATION_TYPE",
     "POSITION",
@@ -20,7 +22,7 @@ export default function InboxPage() {
 
   useEffect(() => {
     api
-      .get(`/approvals/pending-to-me?refreshKey=${refreshKey}`)
+      .get(`/approvals/get-myApproval-documents?refreshKey=${refreshKey}`)
       .then((res) => {
         if (res.data.length > 0) {
           setSelectedItem(res.data[res.data.length - 1]);
@@ -64,12 +66,13 @@ export default function InboxPage() {
       <div className="md:w-1/2 h-full">
         <div className="h-full overflow-y-auto bg-white border rounded-lg p-6">
           <ApprovalTabPanel
-            title="📬 내가 승인할 항목"
-            fetchUrl={`/approvals/pending-to-me?refreshKey=${refreshKey}`}
+            title="📬 나의 결재 문서함"
+            fetchUrl={`/approvals/get-myApproval-documents?refreshKey=${refreshKey}`}
             showActions={true}
             onApprove={handleApprove}
             onReject={handleReject}
             onSelect={(item: ApprovalItem) => setSelectedItem(item)}
+            currentUserId={currentUserId}
           />
         </div>
       </div>
@@ -82,6 +85,7 @@ export default function InboxPage() {
               targetType={selectedItem.targetType}
               targetId={selectedItem.targetId}
               commonCodeMap={commonCodeMap}
+              showActions={true}
             />
           ) : (
             <p className="text-gray-500 text-sm">

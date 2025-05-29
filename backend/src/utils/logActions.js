@@ -9,6 +9,7 @@ const LOG_ACTIONS = {
   ACCESS_DENIED: "ACCESS_DENIED",
   SESSION_EXPIRED: "SESSION_EXPIRED",
   PASSWORD_CHANGE: "PASSWORD_CHANGE",
+  APPROVER_AUTO_FILL: "APPROVER_AUTO_FILL", // 누락 보완
 
   // ✅ TODO 기능
   TODO_CREATE: "TODO_CREATE",
@@ -30,6 +31,7 @@ const LOG_ACTIONS = {
   CATEGORY_UPDATE: "CATEGORY_UPDATE",
   TAG_UPDATE: "TAG_UPDATE",
   LOG_EXPORT: "LOG_EXPORT",
+  SYSTEM_EVENT: "SERVER_STARTED",
 
   // 📊 KPI
   KPI_SUBMIT: "KPI_SUBMIT",
@@ -63,6 +65,27 @@ const LOG_ACTIONS = {
   APPROVE: "APPROVE",
   APPROVE_FAIL: "APPROVE_FAIL",
   REJECT: "REJECT",
+  REJECT_FAIL: "REJECT_FAIL",
+  READ_FAIL: "READ_FAIL",
+
+  //공통코드
+  CODE_LOOKUP: "CODE_LOOKUP",
+  CODE_LOOKUP_FAIL: "CODE_LOOKUP_FAIL",
+
+  // 메뉴
+  MENU_LOOKUP: "MENU_LOOKUP",
+  MENU_LOOKUP_FAIL: "MENU_LOOKUP_FAIL",
+  MENU_ACCESS_FAIL: "MENU_ACCESS_FAIL",
+
+  // 기타 공통
+  ERROR: "ERROR",
+  READ: "READ",
+  CREATE: "CREATE",
+  CREATE_FAIL: "CREATE_FAIL",
+  DELETE: "DELETE",
+  DELETE_FAIL: "DELETE_FAIL",
+  VALIDATE_FAIL: "VALIDATE_FAIL",
+  VALIDATE: "VALIDATE",
 };
 
 const LOG_ACTION_LABELS = {
@@ -74,18 +97,21 @@ const LOG_ACTION_LABELS = {
   ACCESS_DENIED: "접근 거부",
   SESSION_EXPIRED: "세션 만료",
   PASSWORD_CHANGE: "비밀번호 변경",
+  APPROVER_AUTO_FILL: "결재자 자동 지정",
 
   // ✅ TODO 기능
   TODO_CREATE: "할 일 생성",
   TODO_UPDATE: "할 일 수정",
   TODO_DELETE: "할 일 삭제",
   HISTORY_VIEW: "TODO 히스토리 조회",
+  HISTORY_VIEW_FAIL: "TODO 히스토리 조회 실패",
 
   // 👥 사용자 관리
   USER_CREATE: "사용자 등록",
   USER_UPDATE: "사용자 정보 수정",
   USER_DELETE: "사용자 삭제",
   MENU_ACCESS: "메뉴 접근",
+  MENU_ACCESS_FAIL: "메뉴 접근 실패",
 
   // 🛠️ 관리자 설정
   SYSTEM_RESET: "시스템 초기화",
@@ -95,6 +121,7 @@ const LOG_ACTION_LABELS = {
   CATEGORY_UPDATE: "업무/KPI 카테고리 수정",
   TAG_UPDATE: "캘린더 태그 수정",
   LOG_EXPORT: "로그 내보내기",
+  SYSTEM_EVENT: "서버 실행",
 
   // 📊 KPI
   KPI_SUBMIT: "KPI 제출",
@@ -121,13 +148,34 @@ const LOG_ACTION_LABELS = {
 
   // 👤 내 정보
   PROFILE_VIEW: "내 정보 조회",
+  PROFILE_LEAVE_SUMMARY_FAIL: "연차 요약 조회 실패",
 
-  //전자문서
+  // 전자문서
   APPROVAL_QUERY: "승인 요청 조회",
   APPROVAL_QUERY_FAIL: "승인 요청 조회 실패",
   APPROVE: "결재 승인",
   APPROVE_FAIL: "결재 실패",
   REJECT: "결재 반려",
+  REJECT_FAIL: "결재 반려 실패",
+  READ_FAIL: "조회 실패",
+
+  //공통코드
+  CODE_LOOKUP: "공통코드 조회",
+  CODE_LOOKUP_FAIL: "공통코드 조회 실패",
+
+  // 메뉴
+  MENU_LOOKUP: "메뉴 목록 조회",
+  MENU_LOOKUP_FAIL: "메뉴 조회 실패",
+
+  // 기타 공통
+  ERROR: "에러",
+  READ: "조회",
+  CREATE: "생성",
+  CREATE_FAIL: "생성 실패",
+  DELETE: "삭제",
+  DELETE_FAIL: "삭제 실패",
+  VALIDATE_FAIL: "검증 실패",
+  VALIDATE: "검증",
 };
 
 module.exports = { LOG_ACTIONS, LOG_ACTION_LABELS };

@@ -4,24 +4,16 @@ import UnifiedApprovalDetailInlineView from "../../components/approvals/UnifiedA
 import api from "../../utils/axiosInstance";
 import { toast } from "react-toastify";
 import type { ApprovalItem } from "../../types/approval";
-import type { CommonCode } from "../../types/CommonCode";
-
+import useCommonCodeMap from "../../hooks/useCommonCodeMap";
+import { useUser } from "../../contexts/useUser";
 export default function RequestedPage() {
   const [selectedItem, setSelectedItem] = useState<ApprovalItem | null>(null);
-  const [commonCodeMap, setCommonCodeMap] = useState<
-    Record<string, { code: string; label: string }[]>
-  >({});
-
-  useEffect(() => {
-    api.get("/common-codes/all").then((res) => {
-      const grouped: Record<string, { code: string; label: string }[]> = {};
-      res.data.forEach((c: CommonCode) => {
-        if (!grouped[c.group]) grouped[c.group] = [];
-        grouped[c.group].push({ code: c.code, label: c.label });
-      });
-      setCommonCodeMap(grouped);
-    });
-  }, []);
+  const { id: currentUserId } = useUser();
+  const { commonCodeMap } = useCommonCodeMap([
+    "VACATION_TYPE",
+    "POSITION",
+    "DEPARTMENT",
+  ]);
 
   useEffect(() => {
     api
@@ -44,6 +36,8 @@ export default function RequestedPage() {
           fetchUrl="/approvals/requested-by-me"
           showActions={false} // 요청자는 승인/반려 버튼 필요 없음
           onSelect={(item: ApprovalItem) => setSelectedItem(item)}
+          keyExtractor={(item) => item.id}
+          currentUserId={currentUserId}
         />
       </div>
       <div className="md:w-1/2">
@@ -52,6 +46,7 @@ export default function RequestedPage() {
             targetType={selectedItem.targetType}
             targetId={selectedItem.targetId}
             commonCodeMap={commonCodeMap}
+            showActions={false}
           />
         ) : (
           <p className="text-gray-500 text-sm">

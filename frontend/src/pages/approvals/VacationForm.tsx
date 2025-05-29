@@ -4,13 +4,18 @@ import { toast } from "react-toastify";
 import { logEvent } from "../../utils/logger";
 import type { VacationDetail } from "../../types/vacation";
 import type { VacationFormState } from "../../types/forms/vacationForm";
-
+import {
+  roleToPositionMap,
+  roleLabelMap,
+  approverRoleOrder,
+} from "../../types/approvalRoles";
+import useCommonCodeMap from "../../hooks/useCommonCodeMap";
 interface VacationFormProps {
   onSubmitted?: () => void;
   className?: string;
   vacations: VacationDetail[];
+  commonCodeMap: Record<string, { code: string; label: string }[]>;
 }
-
 const timeOptions = [
   "09:00-11:00",
   "10:00-12:00",
@@ -24,10 +29,17 @@ const VacationForm: React.FC<VacationFormProps> = ({
   className = "",
   vacations,
 }) => {
-  const [types, setTypes] = useState<{ code: string; label: string }[]>([]);
   const [approvers, setApprovers] = useState<
-    { id: number; name: string; position_label: string }[]
+    {
+      id: number;
+      name: string;
+      position_label: string;
+      position_code: string;
+    }[]
   >([]);
+  const [selectedApprovers, setSelectedApprovers] = useState<
+    Record<string, number>
+  >({});
 
   const [form, setForm] = useState<VacationFormState>({
     type_code: "ANNUAL",
@@ -39,28 +51,18 @@ const VacationForm: React.FC<VacationFormProps> = ({
     start_time: "",
     end_time: "",
     duration_unit: "FULL",
-    approver_id: null,
   });
   const [submitting, setSubmitting] = useState(false);
   const today = new Date().toISOString().split("T")[0];
 
   const isHalfDay = form.type_code === "HALF";
   const isTimeShift = form.type_code === "TIME_SHIFT";
-
+  const { commonCodeMap } = useCommonCodeMap(["VACATION_TYPE", "POSITION"]);
   useEffect(() => {
-    api
-      .get("/common-codes?group=VACATION_TYPE")
-      .then((res) => setTypes(res.data))
-      .catch((err) => {
-        toast.error("휴가 유형을 불러오지 못했습니다.");
-        console.error("휴가 유형 코드 요청 실패:", err);
-        logEvent("❌ 휴가 유형 코드 요청 실패");
-      });
-
     api
       .get("/user/approvers")
       .then((res) => {
-        setApprovers(res.data); // 전체 정보 저장
+        setApprovers(res.data.approvers);
       })
       .catch((err) => {
         toast.error("결재자 목록 불러오기 실패");
@@ -123,12 +125,19 @@ const VacationForm: React.FC<VacationFormProps> = ({
       return;
     }
 
+    const approver_ids = approverRoleOrder
+      .map((role) => {
+        const posCode = roleToPositionMap[role];
+        return selectedApprovers[posCode];
+      })
+      .filter((id): id is number => typeof id === "number");
+
     const payload = {
       ...form,
       duration_unit,
       start_time,
       end_time,
-      approver_ids: approvers.map((a) => a.id),
+      approver_ids,
     };
 
     try {
@@ -149,8 +158,8 @@ const VacationForm: React.FC<VacationFormProps> = ({
         start_time: "",
         end_time: "",
         duration_unit: "FULL",
-        approver_id: null,
       });
+      setSelectedApprovers({});
 
       onSubmitted?.();
     } catch (err) {
@@ -161,6 +170,25 @@ const VacationForm: React.FC<VacationFormProps> = ({
       setSubmitting(false);
     }
   };
+  type Approver = {
+    id: number;
+    name: string;
+    position_label: string;
+    position_code: string;
+  };
+
+  const positionGroups: Record<string, Approver[]> = {};
+
+  Object.values(roleToPositionMap).forEach((posCode) => {
+    positionGroups[posCode] = [];
+  });
+
+  approvers.forEach((a) => {
+    if (!positionGroups[a.position_code]) {
+      positionGroups[a.position_code] = []; // 명시적 초기화
+    }
+    positionGroups[a.position_code].push(a);
+  });
 
   return (
     <form
@@ -176,7 +204,7 @@ const VacationForm: React.FC<VacationFormProps> = ({
           onChange={(e) => setForm({ ...form, type_code: e.target.value })}
           className="border px-3 py-2 rounded w-60"
         >
-          {types.map((type) => (
+          {(commonCodeMap["VACATION_TYPE"] || []).map((type) => (
             <option key={type.code} value={type.code}>
               {type.label}
             </option>
@@ -251,9 +279,45 @@ const VacationForm: React.FC<VacationFormProps> = ({
 
       <div>
         <p className="text-sm text-gray-500 italic">
-          ※ 결재자는 부서별 직급 기준으로 자동 지정됩니다.
+          ※ 결재자는 부서별 직급 기준으로 자동 지정됩니다. 직급별로 한 명씩
+          선택해야 합니다.
         </p>
       </div>
+
+      {approverRoleOrder.map((role) => {
+        const posCode = roleToPositionMap[role];
+        const group = positionGroups[posCode];
+        const posLabel =
+          commonCodeMap["POSITION"]?.find((item) => item.code === posCode)
+            ?.label ?? posCode;
+
+        if (!group || group.length === 0) return null;
+
+        return (
+          <div key={role}>
+            <label className="block text-sm font-medium mb-1">
+              {roleLabelMap[role]} ({posLabel}) 선택
+            </label>
+            <select
+              value={selectedApprovers[posCode] ?? ""}
+              onChange={(e) =>
+                setSelectedApprovers((prev) => ({
+                  ...prev,
+                  [posCode]: parseInt(e.target.value),
+                }))
+              }
+              className="border px-3 py-2 rounded w-60"
+            >
+              <option value="">선택</option>
+              {group.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name} ({a.position_label})
+                </option>
+              ))}
+            </select>
+          </div>
+        );
+      })}
 
       <div>
         <label className="block mb-1">사유 (선택)</label>
@@ -264,18 +328,6 @@ const VacationForm: React.FC<VacationFormProps> = ({
           onChange={(e) => setForm({ ...form, reason: e.target.value })}
         />
       </div>
-      {approvers.length > 0 && (
-        <div className="bg-gray-50 border p-4 rounded text-sm">
-          <p className="font-medium mb-2">자동 지정된 결재자:</p>
-          <ul className="list-disc pl-5 space-y-1">
-            {approvers.map((a, idx) => (
-              <li key={a.id}>
-                {idx + 1}차: {a.name} ({a.position_label})
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
 
       <button
         type="submit"

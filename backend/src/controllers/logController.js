@@ -10,21 +10,31 @@ exports.logMenuAccess = async (req, res) => {
       req,
       user,
       LOG_ACTIONS.MENU_ACCESS_FAIL,
-      "label 또는 path 누락"
+      "label 또는 path 누락",
+      "error"
     );
+
     return res.status(400).json({ error: "label과 path는 필수입니다." });
   }
 
   try {
-    logSystemAction(req, user, LOG_ACTIONS.MENU_ACCESS, `${label} (${path})`);
+    // 정상적인 메뉴 접근 기록
+    logSystemAction(
+      req,
+      user,
+      LOG_ACTIONS.MENU_ACCESS,
+      `${label} (${path})`,
+      "info"
+    );
     res.status(200).json({ success: true });
   } catch (err) {
-    console.error("메뉴 접근 로그 실패:", err);
+    // 예외 발생 시
     logSystemAction(
       req,
       user,
       LOG_ACTIONS.MENU_ACCESS_FAIL,
-      `예외 발생: ${err.message}`
+      `예외 발생: ${err.message}`,
+      "error"
     );
     res.status(500).json({ error: "메뉴 접근 기록 실패" });
   }

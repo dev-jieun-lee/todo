@@ -10,7 +10,8 @@ exports.getCodesByGroup = async (req, res) => {
       req,
       null,
       LOG_ACTIONS.CODE_LOOKUP_FAIL,
-      "공통코드 조회 실패 - group 누락"
+      "공통코드 조회 실패 - group 누락",
+      "error"
     );
     return res.status(400).json({ error: "code_group is required" });
   }
@@ -20,22 +21,24 @@ exports.getCodesByGroup = async (req, res) => {
       `SELECT code, label FROM common_codes WHERE code_group = ? AND active = 1 ORDER BY sort_order ASC`,
       [group]
     );
-
     logSystemAction(
       req,
-      req.user ?? null,
+      req.user,
       LOG_ACTIONS.CODE_LOOKUP,
-      `공통코드 조회 - 그룹: ${group}`
+      `공통코드 조회 - 그룹: ${group}`,
+      "info"
     );
+
     res.json(rows);
   } catch (err) {
-    console.error("공통코드 조회 실패:", err);
     logSystemAction(
       req,
-      req.user ?? null,
-      LOG_ACTIONS.CODE_LOOKUP_FAIL,
-      `공통코드 조회 예외: ${err.message}`
+      req.user,
+      "CODE_LOOKUP",
+      `공통코드 조회 - 그룹: ${group}`,
+      "info"
     );
+
     res.status(500).json({ error: "공통코드 조회 실패" });
   }
 };

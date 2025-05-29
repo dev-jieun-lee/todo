@@ -17,7 +17,6 @@ const {
   logSystemAction,
 } = require("../utils/handleError");
 const { LOG_ACTIONS, LOG_ACTION_LABELS } = require("../utils/logActions");
-const { dbGet, dbAll, dbRun } = require("../utils/dbHelpers");
 
 const SECRET_KEY = process.env.SECRET_KEY;
 
@@ -32,7 +31,8 @@ const login = (req, res) => {
           req,
           null,
           LOG_ACTIONS.LOGIN_FAIL,
-          `DB 오류 - ${username}`
+          `DB 오류 - ${username}`,
+          "error"
         );
         return;
       }
@@ -43,7 +43,8 @@ const login = (req, res) => {
           req,
           null,
           LOG_ACTIONS.LOGIN_FAIL,
-          LOG_ACTION_LABELS.LOGIN_FAIL
+          LOG_ACTION_LABELS.LOGIN_FAIL,
+          "error"
         );
         return res.status(401).json({ error: "존재하지 않는 사용자명입니다." });
       }
@@ -53,9 +54,10 @@ const login = (req, res) => {
           logWarning(`로그인 실패: 비밀번호 불일치 (${username})`);
           logSystemAction(
             req,
-            user,
+            null,
             LOG_ACTIONS.LOGIN_FAIL,
-            LOG_ACTION_LABELS.LOGIN_FAIL
+            LOG_ACTION_LABELS.LOGIN_FAIL,
+            "error"
           );
           return res
             .status(401)
@@ -72,7 +74,13 @@ const login = (req, res) => {
           expiresIn: "14d",
         });
 
-        logSystemAction(req, user, LOG_ACTIONS.LOGIN, LOG_ACTION_LABELS.LOGIN);
+        logSystemAction(
+          req,
+          user,
+          LOG_ACTIONS.LOGIN,
+          LOG_ACTION_LABELS.LOGIN,
+          "info"
+        );
         logEvent(`로그인 성공: ${username} (ID: ${user.id})`);
 
         const now = new Date();
@@ -124,7 +132,8 @@ const login = (req, res) => {
       req,
       null,
       LOG_ACTIONS.LOGIN_FAIL,
-      `서버 예외: ${e.message}`
+      `서버 예외: ${e.message}`,
+      "error"
     );
     return res
       .status(500)
@@ -133,7 +142,15 @@ const login = (req, res) => {
 };
 
 const logout = (req, res) => {
-  console.log("🧪 [서버] 받은 쿠키:", req.cookies);
+  // 로그 기록: 받은 쿠키
+  logSystemAction(
+    req,
+    req.user,
+    LOG_ACTIONS.LOGOUT,
+    `🧪 [서버] 받은 쿠키: ${JSON.stringify(req.cookies)}`,
+    "info" // 쿠키 조회 시 정보 로그
+  );
+
   const refreshToken = req.cookies.refreshToken;
   if (refreshToken) {
     deleteRefreshToken(refreshToken, (err) => {
@@ -147,11 +164,13 @@ const logout = (req, res) => {
   const id = req.user?.id || null;
   const username = req.user?.username || "unknown";
 
+  // 로그아웃 성공
   logSystemAction(
     req,
     req.user ?? null,
     LOG_ACTIONS.LOGOUT,
-    LOG_ACTION_LABELS.LOGOUT
+    LOG_ACTION_LABELS.LOGOUT,
+    "info"
   );
   logEvent(`로그아웃 완료: ${username} (ID: ${id ?? "?"})`);
 
@@ -179,11 +198,13 @@ const refresh = (req, res) => {
         expiresIn: "15m",
       });
 
+      // 토큰 갱신
       logSystemAction(
         req,
         { id, username },
         LOG_ACTIONS.TOKEN_REFRESH,
-        LOG_ACTION_LABELS.TOKEN_REFRESH
+        LOG_ACTION_LABELS.TOKEN_REFRESH,
+        "info"
       );
       return res.json({ token: newAccessToken });
     });

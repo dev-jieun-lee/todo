@@ -1,25 +1,111 @@
-const db = require("../config/db");
+const { dbGet, dbAll } = require("../utils/dbHelpers");
+const { logSystemAction } = require("../utils/handleError");
+const { LOG_ACTIONS } = require("../utils/logActions");
 
+/**
+ * 사용자 이름으로 사용자 조회
+ */
 const findUserByUsername = (username, callback) => {
   const query = `SELECT * FROM users WHERE username = ?`;
-  db.get(query, [username], (err, row) => {
-    if (err) {
-      console.error(`❌ 사용자 조회 중 DB 오류 (username: ${username})`, err);
-    } else if (!row) {
-      console.warn(`⚠️ 사용자 없음 (username: ${username})`);
-    } else {
-      console.log(`사용자 조회 성공: ${username}`);
-    }
-    callback(err, row);
-  });
+  dbGet(query, [username])
+    .then((row) => {
+      if (!row) {
+        logSystemAction(
+          null,
+          null,
+          LOG_ACTIONS.READ_FAIL,
+          `사용자 없음 (username: ${username})`,
+          "warn"
+        );
+      } else {
+        logSystemAction(
+          null,
+          null,
+          LOG_ACTIONS.READ,
+          `사용자 조회 성공 (username: ${username})`,
+          "info"
+        );
+      }
+      callback(null, row);
+    })
+    .catch((err) => {
+      logSystemAction(
+        null,
+        null,
+        LOG_ACTIONS.ERROR,
+        `DB 오류: 사용자 조회 (username: ${username}) - ${err.message}`,
+        "error"
+      );
+      callback(err, null);
+    });
 };
 
+/**
+ * 모든 사용자 조회
+ */
 const findAllUsers = (callback) => {
-  db.all("SELECT id, username, name, role FROM users", [], callback);
+  const query = "SELECT id, username, name, role FROM users";
+  dbAll(query, [])
+    .then((rows) => {
+      logSystemAction(
+        null,
+        null,
+        LOG_ACTIONS.READ,
+        `모든 사용자 조회 성공 (user count: ${rows.length})`,
+        "info"
+      );
+      callback(null, rows);
+    })
+    .catch((err) => {
+      logSystemAction(
+        null,
+        null,
+        LOG_ACTIONS.ERROR,
+        `DB 오류: 모든 사용자 조회 - ${err.message}`,
+        "error"
+      );
+      callback(err, null);
+    });
 };
-function findUserById(id, callback) {
-  db.get("SELECT * FROM users WHERE id = ?", [id], callback);
-}
+
+/**
+ * 사용자 ID로 사용자 조회
+ */
+const findUserById = (id, callback) => {
+  const query = "SELECT * FROM users WHERE id = ?";
+  dbGet(query, [id])
+    .then((row) => {
+      if (!row) {
+        logSystemAction(
+          null,
+          null,
+          LOG_ACTIONS.READ_FAIL,
+          `사용자 없음 (ID: ${id})`,
+          "warn"
+        );
+      } else {
+        logSystemAction(
+          null,
+          null,
+          LOG_ACTIONS.READ,
+          `사용자 조회 성공 (ID: ${id})`,
+          "info"
+        );
+      }
+      callback(null, row);
+    })
+    .catch((err) => {
+      logSystemAction(
+        null,
+        null,
+        LOG_ACTIONS.ERROR,
+        `DB 오류: 사용자 조회 (ID: ${id}) - ${err.message}`,
+        "error"
+      );
+      callback(err, null);
+    });
+};
+
 module.exports = {
   findUserByUsername,
   findAllUsers,

@@ -53,12 +53,19 @@ export default function ApprovalDetailLayout({
       <div className="mt-4">
         <h3 className="text-sm font-semibold mb-2">승인 이력</h3>
         <ul className="text-sm space-y-1">
-          {history.map((h, idx) => (
-            <li key={idx}>
-              [{h.step}단계] {h.actor_name} - {h.action} ({h.memo || "-"}) @{" "}
-              {h.performed_at}
-            </li>
-          ))}
+          {history.map((h, idx) => {
+            const position = h.position_label || "";
+            const department = h.department_label || "";
+            const name = `${position} ${h.actor_name}`.trim();
+            const deptText = department ? ` (${department})` : "";
+
+            return (
+              <li key={idx}>
+                [{h.step}단계] {name}
+                {deptText} - {h.action} ({h.memo || "-"}) @ {h.performed_at}
+              </li>
+            );
+          })}
         </ul>
       </div>
     </div>

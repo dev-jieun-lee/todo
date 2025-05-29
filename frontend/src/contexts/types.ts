@@ -1,6 +1,7 @@
 export type RoleType = "user" | "ADMIN" | "USER" | "HR";
 
 export type UserContextType = {
+  id: number;
   username: string;
   name: string;
   token: string | null;

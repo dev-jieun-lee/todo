@@ -4,7 +4,6 @@ const router = express.Router();
 const approvalController = require("../controllers/approvalController");
 const authenticateToken = require("../middlewares/authMiddleware");
 
-// 승인 / 반려
 router.post(
   "/:targetType/:targetId/approve",
   authenticateToken,
@@ -32,9 +31,9 @@ router.get(
 
 // 내가 승인할 항목
 router.get(
-  "/pending-to-me",
+  "/get-myApproval-documents",
   authenticateToken,
-  approvalController.getPendingToMe
+  approvalController.getMyApprovalDocuments
 );
 
 // 결재자 직급 정보 조회

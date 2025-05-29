@@ -32,9 +32,9 @@ exports.forceLogout = async (req, res) => {
       req,
       adminUser,
       LOG_ACTIONS.FORCE_LOGOUT,
-      `${LOG_ACTION_LABELS.FORCE_LOGOUT}: 대상 사용자 ID ${user_id}`
+      `${LOG_ACTION_LABELS.FORCE_LOGOUT}: 대상 사용자 ID ${user_id}`,
+      "info"
     );
-
     findUserById(user_id, (err, user) => {
       if (err || !user) {
         logWarning(`강제 로그아웃 대상 사용자(${user_id})가 존재하지 않음`);

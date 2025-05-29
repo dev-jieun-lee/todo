@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import ApprovalDetailLayout from "./ApprovalDetailLayout";
-import ApprovalDetailContent from "./ApprovalDetailContent";
+import UnifiedApprovalDetailContent from "./UnifiedApprovalDetailContent";
 import api from "../../utils/axiosInstance";
 import { toast } from "react-toastify";
 import type { ApprovalDetail, ApprovalHistoryItem } from "../../types/approval";
@@ -70,7 +70,7 @@ export default function UnifiedApprovalDetailInlineView({
         onApprove={handleApprove}
         onReject={handleReject}
       >
-        <ApprovalDetailContent
+        <UnifiedApprovalDetailContent
           targetType={targetType}
           data={detail.data}
           commonCodeMap={commonCodeMap}
