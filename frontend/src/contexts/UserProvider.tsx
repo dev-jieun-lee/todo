@@ -9,22 +9,38 @@ import "react-toastify/dist/ReactToastify.css";
 import { setAccessToken, setUpdateTokenFunction } from "../utils/tokenManager";
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const [username, setUsername] = useState("사용자");
-  const [name, setName] = useState("");
+  const [id, setId] = useState<number | undefined>(undefined);
+  const [username, setUsername] = useState<string>("");
+  const [employee_number, setEmployeeNumber] = useState<string>("");
+  const [name, setName] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
   const [token, setToken] = useState<string | null>(null);
   const [role, setRole] = useState<RoleType>("user");
-  const [isLoading, setIsLoading] = useState(true);
+  const [department_code, setDepartmentCode] = useState<string>("");
+  const [position_code, setPositionCode] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const login: UserContextType["login"] = ({ username, name, token, role }) => {
-    console.log("[login] 전달된 값:", { username, name, token, role });
+  const login: UserContextType["login"] = ({
+    id,
+    username,
+    name,
+    token,
+    role,
+  }) => {
+    console.log("[login] 전달된 값:", { id, username, name, token, role });
+    setId(id);
     setUsername(username);
+    setEmployeeNumber(employee_number);
     setName(name);
+    setEmail(email);
     setToken(token);
     setRole(role);
+    setDepartmentCode(department_code);
+    setPositionCode(position_code);
     setAccessToken(token); // axios용 토큰 설정
     localStorage.setItem(
       "auth",
-      JSON.stringify({ username, name, token, role })
+      JSON.stringify({ id, username, name, token, role }) //넘길 값 추가
     );
   };
 
@@ -37,11 +53,15 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     } catch (err) {
       console.warn("❗ 서버 로그아웃 기록 실패:", err);
     }
-
+    setId(undefined);
     setUsername("");
+    setEmployeeNumber("");
     setName("");
+    setEmail("");
     setToken(null);
     setRole("user");
+    setDepartmentCode("");
+    setPositionCode("");
     localStorage.removeItem("auth");
     setAccessToken(""); // 메모리 토큰 초기화
   };
@@ -53,20 +73,30 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       const { username, name, token, role } = JSON.parse(stored);
       if (token) setAccessToken(token);
       console.log("🗂️ [초기 로딩] localStorage auth 값:", {
+        id,
         username,
+        employee_number,
         name,
+        email,
         token,
         role,
+        department_code,
+        position_code,
       });
       if (token && isTokenExpired(token)) {
         console.warn("⏰ JWT 토큰 만료됨. 자동 로그아웃 처리.");
         toast.info("로그인 세션이 만료되어 자동 로그아웃됩니다.");
         logout().finally(() => setIsLoading(false)); // 로그아웃 후 로딩 완료
       } else {
+        setId(id);
         setUsername(username);
+        setEmployeeNumber(employee_number);
         setName(name);
+        setEmail(email);
         setToken(token);
         setRole(role);
+        setDepartmentCode(department_code);
+        setPositionCode(position_code);
         setIsLoading(false); // 복원 완료 후 로딩 종료
       }
     } else {
@@ -104,10 +134,15 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   return (
     <UserContext.Provider
       value={{
+        id,
         username,
+        employee_number,
         name,
+        email,
         token,
         role,
+        department_code,
+        position_code,
         login,
         logout,
         updateToken,

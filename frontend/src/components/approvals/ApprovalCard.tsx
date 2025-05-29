@@ -75,6 +75,7 @@ function ApprovalCard({
   };
   currentUserId: number;
 }) {
+  console.log("ApprovalCard currentUserId:", currentUserId);
   const [rejectMemo, setRejectMemo] = useState("");
   const [approverLabel, setApproverLabel] = useState<string>("");
 

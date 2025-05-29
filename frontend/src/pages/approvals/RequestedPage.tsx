@@ -8,7 +8,7 @@ import useCommonCodeMap from "../../hooks/useCommonCodeMap";
 import { useUser } from "../../contexts/useUser";
 export default function RequestedPage() {
   const [selectedItem, setSelectedItem] = useState<ApprovalItem | null>(null);
-  const { id: currentUserId } = useUser();
+  const { id } = useUser();
   const { commonCodeMap } = useCommonCodeMap([
     "VACATION_TYPE",
     "POSITION",
@@ -37,7 +37,7 @@ export default function RequestedPage() {
           showActions={false} // 요청자는 승인/반려 버튼 필요 없음
           onSelect={(item: ApprovalItem) => setSelectedItem(item)}
           keyExtractor={(item) => item.id}
-          currentUserId={currentUserId}
+          currentUserId={id ?? 0} // undefined라면 0 등으로 대체
         />
       </div>
       <div className="md:w-1/2">

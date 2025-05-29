@@ -8,7 +8,8 @@ import useCommonCodeMap from "../../hooks/useCommonCodeMap";
 import { useUser } from "../../contexts/useUser";
 
 export default function InboxPage() {
-  const { id: currentUserId } = useUser();
+  const { id } = useUser();
+  console.log("Inbox currentUserId:", id);
   const { commonCodeMap } = useCommonCodeMap([
     "VACATION_TYPE",
     "POSITION",
@@ -72,7 +73,7 @@ export default function InboxPage() {
             onApprove={handleApprove}
             onReject={handleReject}
             onSelect={(item: ApprovalItem) => setSelectedItem(item)}
-            currentUserId={currentUserId}
+            currentUserId={id ?? 0} // undefined라면 0 등으로 대체
           />
         </div>
       </div>

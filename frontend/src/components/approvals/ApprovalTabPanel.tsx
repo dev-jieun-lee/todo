@@ -4,6 +4,7 @@ import api from "../../utils/axiosInstance";
 import { toast } from "react-toastify";
 import type { ApprovalItem, ApprovalListItem } from "../../types/approval";
 import useCommonCodeMap from "../../hooks/useCommonCodeMap";
+import { useUser } from "../../contexts/useUser";
 
 interface ApprovalTabPanelProps {
   title: string;
@@ -25,6 +26,7 @@ export default function ApprovalTabPanel({
   onSelect,
   currentUserId,
 }: ApprovalTabPanelProps) {
+  console.log("TabPanel currentUserId:", currentUserId);
   const [selectedType, setSelectedType] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [items, setItems] = useState<ApprovalListItem[]>([]);
@@ -33,6 +35,7 @@ export default function ApprovalTabPanel({
     "APPROVAL_TARGET",
     "APPROVAL_STATUS",
   ]);
+  const { id } = useUser();
 
   useEffect(() => {
     const url = new URL(fetchUrl, window.location.origin);
@@ -128,7 +131,7 @@ export default function ApprovalTabPanel({
               current_pending_step: a.current_pending_step,
               approver_id: a.approver_id,
             }}
-            currentUserId={currentUserId}
+            currentUserId={id ?? 0}
             showActions={showActions}
           />
         ))
