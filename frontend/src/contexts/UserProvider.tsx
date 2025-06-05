@@ -20,28 +20,34 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [position_code, setPositionCode] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const login: UserContextType["login"] = ({
-    id,
-    username,
-    name,
-    token,
-    role,
-  }) => {
-    console.log("[login] 전달된 값:", { id, username, name, token, role });
-    setId(id);
-    setUsername(username);
-    setEmployeeNumber(employee_number);
-    setName(name);
-    setEmail(email);
-    setToken(token);
-    setRole(role);
-    setDepartmentCode(department_code);
-    setPositionCode(position_code);
-    setAccessToken(token); // axios용 토큰 설정
-    localStorage.setItem(
-      "auth",
-      JSON.stringify({ id, username, name, token, role }) //넘길 값 추가
-    );
+  // 🟢 로그인 함수 (여기서 id/username 등 찍기!)
+  const login: UserContextType["login"] = (user) => {
+    console.log("[login] 전달된 값:", user);
+    setId(user.id);
+    setUsername(user.username);
+    setEmployeeNumber(user.employee_number ?? "");
+    setName(user.name);
+    setEmail(user.email ?? "");
+    setToken(user.token);
+    setRole(user.role);
+    setDepartmentCode(user.department_code ?? "");
+    setPositionCode(user.position_code ?? "");
+    setAccessToken(user.token);
+
+    // localStorage에 모든 정보 저장 (여기도 콘솔!)
+    const authObj = {
+      id: user.id,
+      username: user.username,
+      employee_number: user.employee_number ?? "",
+      name: user.name,
+      email: user.email ?? "",
+      token: user.token,
+      role: user.role,
+      department_code: user.department_code ?? "",
+      position_code: user.position_code ?? "",
+    };
+    console.log("[login] localStorage에 저장할 값:", authObj);
+    localStorage.setItem("auth", JSON.stringify(authObj));
   };
 
   const logout = async () => {
@@ -70,8 +76,18 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const stored = localStorage.getItem("auth");
     if (stored) {
-      const { username, name, token, role } = JSON.parse(stored);
-      if (token) setAccessToken(token);
+      const {
+        id,
+        username,
+        employee_number,
+        name,
+        email,
+        token,
+        role,
+        department_code,
+        position_code,
+      } = JSON.parse(stored);
+
       console.log("🗂️ [초기 로딩] localStorage auth 값:", {
         id,
         username,
@@ -83,6 +99,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         department_code,
         position_code,
       });
+
+      if (token) setAccessToken(token);
+
       if (token && isTokenExpired(token)) {
         console.warn("⏰ JWT 토큰 만료됨. 자동 로그아웃 처리.");
         toast.info("로그인 세션이 만료되어 자동 로그아웃됩니다.");
@@ -90,13 +109,13 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setId(id);
         setUsername(username);
-        setEmployeeNumber(employee_number);
+        setEmployeeNumber(employee_number ?? "");
         setName(name);
-        setEmail(email);
+        setEmail(email ?? "");
         setToken(token);
         setRole(role);
-        setDepartmentCode(department_code);
-        setPositionCode(position_code);
+        setDepartmentCode(department_code ?? "");
+        setPositionCode(position_code ?? "");
         setIsLoading(false); // 복원 완료 후 로딩 종료
       }
     } else {
@@ -117,6 +136,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     return () => clearInterval(interval); // 언마운트 시 제거
   }, [token]);
 
+  //토큰 갱신 함수
   const updateToken = (newToken: string) => {
     setToken(newToken);
 
@@ -125,6 +145,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       const auth = JSON.parse(stored);
       auth.token = newToken;
       localStorage.setItem("auth", JSON.stringify(auth));
+      console.log("[updateToken] localStorage 토큰 갱신:", newToken);
     }
   };
   useEffect(() => {

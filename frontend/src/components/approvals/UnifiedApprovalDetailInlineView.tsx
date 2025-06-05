@@ -4,6 +4,7 @@ import UnifiedApprovalDetailContent from "./UnifiedApprovalDetailContent";
 import api from "../../utils/axiosInstance";
 import { toast } from "react-toastify";
 import type { ApprovalDetail, ApprovalHistoryItem } from "../../types/approval";
+import { useUser } from "../../contexts/useUser";
 
 interface Props {
   targetType: string;
@@ -19,6 +20,10 @@ export default function UnifiedApprovalDetailInlineView({
 }: Props) {
   const [detail, setDetail] = useState<ApprovalDetail | null>(null);
   const [history, setHistory] = useState<ApprovalHistoryItem[]>([]);
+  const user = useUser();
+  console.log("useUser 전체 값:", user);
+  const currentUserId = user?.id;
+  console.log("currentUserId:", currentUserId);
 
   useEffect(() => {
     api
@@ -28,6 +33,7 @@ export default function UnifiedApprovalDetailInlineView({
           "📦 UnifiedApprovalDetailInlineView.tsx.data (API 응답):",
           res.data
         ); // 여기를 가장 먼저 찍어보세요
+
         setDetail(res.data);
       })
       .catch(() => toast.error("상세 정보를 불러오지 못했습니다."));
@@ -62,11 +68,28 @@ export default function UnifiedApprovalDetailInlineView({
     );
   }
 
+  const isMyTurn =
+    detail &&
+    detail.status === "PENDING" &&
+    detail.currentApproverId === currentUserId; // 구조는 실제 데이터에 따라 맞춰야 함
+
+  console.log(
+    "내 차례 판별:",
+    "[ApprovalDetailLayout] showActions:",
+    isMyTurn,
+    "currentApproverId:",
+    detail.currentApproverId,
+    "currentUserId:",
+    currentUserId,
+    "status:",
+    detail.status
+  );
   return (
     <div className="w-full">
       <ApprovalDetailLayout
         title={`${targetType.toUpperCase()} 문서 상세`}
         history={history}
+        showActions={isMyTurn}
         onApprove={handleApprove}
         onReject={handleReject}
       >

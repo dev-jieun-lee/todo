@@ -4,3 +4,46 @@
 | ② 승인/반려 처리 | 내부에서 `handleApprove`, `handleReject` 정의 후 `ApprovalDetailLayout`에 전달    |
 | ③ 본문 렌더링   | `<ApprovalDetailContent targetType={...} data={...} />`를 렌더링함           |
 | ⛳ 최종 뷰     | `ApprovalDetailContent` 내부에서 문서 유형별로 `<VacationDetailContent />` 등을 호출함 |
+
+
+
+결재(승인) 상세 화면 호출 순서 요약
+1. ApprovalTabPanel.tsx
+결재 문서 목록을 보여줌
+(문서 클릭 시 → 상세로 이동)
+
+↓
+
+2. UnifiedApprovalDetail.tsx / UnifiedApprovalDetailInlineView.tsx
+상세 컨테이너
+선택 문서의 상세 데이터를 API로 조회
+(상세 오른쪽 영역 담당)
+
+↓
+
+3. UnifiedApprovalDetailContent.tsx
+문서 타입별 상세 분기
+(예: 휴가면 VacationDetailContent 호출)
+
+↓
+
+4. VacationDetailContent.tsx
+휴가 데이터 가공 및 전달
+(결재라인 등 처리 후 VacationDetailView로 넘김)
+
+↓
+
+5. VacationDetailView.tsx (+ VacationDetailView.css)
+실제 휴가원 상세 UI 렌더
+(결재라인, 정보, 스타일 등 실제 표시)
+
+추가 역할 파일
+ApprovalCard.tsx:
+결재함 목록의 카드(왼쪽)
+→ 승인/반려 버튼, 요약정보 등 담당
+
+ActionButtons.tsx:
+버튼만 따로 관리 시 옵션 컴포넌트
+
+ApprovalDetailLayout.tsx:
+상세 전체를 감싸는 래퍼(스타일/구조)

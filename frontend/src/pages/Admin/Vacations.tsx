@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../../utils/axiosInstance";
-import { toast } from "react-toastify";
+// import { toast } from "react-toastify";
 import { handleApiError } from "../../utils/handleErrorFront";
 import useCommonCodeMap from "../../hooks/useCommonCodeMap";
 import type { ApprovalVacation } from "../../types/types";
@@ -26,25 +26,25 @@ const Vacations = () => {
     }
   };
 
-  const handleApprove = async (id: number) => {
-    try {
-      await api.post(`/approvals/vacation/${id}/approve`);
-      toast.success("승인 완료");
-      fetchVacations();
-    } catch (err) {
-      handleApiError(err, "휴가 승인 처리 중 오류 발생");
-    }
-  };
+  // const handleApprove = async (id: number) => {
+  //   try {
+  //     await api.post(`/approvals/vacation/${id}/approve`);
+  //     toast.success("승인 완료");
+  //     fetchVacations();
+  //   } catch (err) {
+  //     handleApiError(err, "휴가 승인 처리 중 오류 발생");
+  //   }
+  // };
 
-  const handleReject = async (id: number) => {
-    try {
-      await api.post(`/approvals/vacation/${id}/reject`, { memo: "반려 사유" });
-      toast.success("반려 완료");
-      fetchVacations();
-    } catch (err) {
-      handleApiError(err, "휴가 반려 처리 중 오류 발생");
-    }
-  };
+  // const handleReject = async (id: number) => {
+  //   try {
+  //     await api.post(`/approvals/vacation/${id}/reject`, { memo: "반려 사유" });
+  //     toast.success("반려 완료");
+  //     fetchVacations();
+  //   } catch (err) {
+  //     handleApiError(err, "휴가 반려 처리 중 오류 발생");
+  //   }
+  // };
 
   useEffect(() => {
     fetchVacations();
@@ -106,7 +106,7 @@ const Vacations = () => {
                   : "-"}
               </td>
               <td className="p-2">
-                {v.status === "PENDING" ? (
+                {/* {v.status === "PENDING" ? (
                   <div className="space-x-2">
                     <button
                       onClick={() => handleApprove(v.target_id)}
@@ -123,7 +123,8 @@ const Vacations = () => {
                   </div>
                 ) : (
                   "-"
-                )}
+                )} */}
+                {"-"}
               </td>
             </tr>
           ))}

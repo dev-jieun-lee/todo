@@ -14,25 +14,6 @@ export default function VacationDetailView({
   commonCodeMap,
 }: VacationDetailViewProps) {
   const { formatDate, calculateDays } = useDateUtils();
-  console.log("🧍 snapshot_name:", data.snapshot_name); // [1]
-  console.log(
-    "🏢 department:",
-    data.snapshot_department_code,
-    data.snapshot_department_label
-  ); // [2]
-  console.log(
-    "👔 position:",
-    data.snapshot_position_code,
-    data.snapshot_position_label
-  ); // [3]
-  console.log(
-    "📅 start_date:",
-    data.start_date,
-    "→",
-    formatDate(data.start_date)
-  ); // [4]
-  console.log("📅 end_date:", data.end_date, "→", formatDate(data.end_date)); // [5]
-  console.log("🗂 approvers:", approvers); // [6]
 
   const departmentLabel =
     commonCodeMap["DEPARTMENT"]?.find(
@@ -45,6 +26,96 @@ export default function VacationDetailView({
     )?.label || data.snapshot_position_label;
 
   const vacationTypeList = (commonCodeMap["VACATION_TYPE"] || []).slice(0, 7);
+
+  // 결재자 칸 렌더링: 이름, 승인일시, 승인마크 ✔️
+  // function renderApproverCell(role: string) {
+  //   // approvers: {manager, partLead, teamLead, deptHead, ceo}
+  //   const approver = approvers?.[role];
+  //   if (!approver) return "";
+
+  //   if (
+  //     typeof approver === "object" &&
+  //     approver !== null &&
+  //     "name" in approver
+  //   ) {
+  //     return (
+  //       <div style={{ minHeight: 36, minWidth: 70 }}>
+  //         <span>{approver.name}</span>
+  //         {approver.status === "APPROVED" && (
+  //           <span
+  //             style={{ display: "block", fontSize: "11px", color: "#16a34a" }}
+  //           >
+  //             {approver.approvedAt
+  //               ? approver.approvedAt.slice(0, 16).replace("T", " ")
+  //               : ""}
+  //             <span style={{ marginLeft: 3, color: "#16a34a" }}>✔</span>
+  //           </span>
+  //         )}
+  //         {approver.status === "REJECTED" && (
+  //           <span
+  //             style={{ display: "block", fontSize: "11px", color: "#ef4444" }}
+  //           >
+  //             반려
+  //           </span>
+  //         )}
+  //       </div>
+  //     );
+  //   }
+  //   return approver;
+  // }
+
+  function renderApproverCell(role: string) {
+    const approver = approvers?.[role];
+    if (!approver) return "";
+
+    // object 구조
+    if (
+      typeof approver === "object" &&
+      approver !== null &&
+      "name" in approver
+    ) {
+      return (
+        <div style={{ minHeight: 36, minWidth: 70 }}>
+          <span>{approver.name}</span>
+          {approver.status === "APPROVED" && (
+            <span
+              style={{ display: "block", fontSize: "11px", color: "#16a34a" }}
+            >
+              승인완료
+              {approver.approvedAt && (
+                <span style={{ marginLeft: 6, color: "#666" }}>
+                  <br />
+                  {approver.approvedAt.slice(0, 16).replace("T", " ")}
+                </span>
+              )}
+              <span style={{ marginLeft: 4, color: "#16a34a" }}>✔</span>
+            </span>
+          )}
+          {approver.status === "REJECTED" && (
+            <span
+              style={{ display: "block", fontSize: "11px", color: "#ef4444" }}
+            >
+              반려
+              {approver.approvedAt && (
+                <span style={{ marginLeft: 6, color: "#666" }}>
+                  <br />
+                  {approver.approvedAt.slice(0, 16).replace("T", " ")}
+                </span>
+              )}
+              <span style={{ marginLeft: 4, color: "#ef4444" }}>✖</span>
+            </span>
+          )}
+          {approver.status === "PENDING" && (
+            <span style={{ display: "block", fontSize: "11px", color: "#aaa" }}>
+              대기
+            </span>
+          )}
+        </div>
+      );
+    }
+    // 문자열 구조(이전)
+    return <span>{approver}</span>;
+  }
 
   return (
     <div className="vacation-form">
@@ -72,11 +143,11 @@ export default function VacationDetailView({
               <br />
               부서
             </td>
-            <td>{approvers?.manager || ""}</td>
-            <td>{approvers?.partLead || ""}</td>
-            <td>{approvers?.teamLead || ""}</td>
-            <td>{approvers?.deptHead || ""}</td>
-            <td>{approvers?.ceo || ""}</td>
+            <td>{renderApproverCell("manager")}</td>
+            <td>{renderApproverCell("partLead")}</td>
+            <td>{renderApproverCell("teamLead")}</td>
+            <td>{renderApproverCell("deptHead")}</td>
+            <td>{renderApproverCell("ceo")}</td>
           </tr>
           <tr>
             <td>

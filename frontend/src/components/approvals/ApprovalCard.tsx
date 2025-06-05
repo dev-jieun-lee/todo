@@ -1,7 +1,6 @@
 // src/components/approvals/ApprovalCard.tsx
 //import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "../ui/card";
-import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { useState, useEffect } from "react";
 import api from "../../utils/axiosInstance";
@@ -61,8 +60,6 @@ function ApprovalCard({
   createdAt,
   dueDate,
   data,
-  onApprove,
-  onReject,
   onClick,
   approval,
   currentUserId,
@@ -75,25 +72,9 @@ function ApprovalCard({
   };
   currentUserId: number;
 }) {
-  console.log("ApprovalCard currentUserId:", currentUserId);
-  const [rejectMemo, setRejectMemo] = useState("");
   const [approverLabel, setApproverLabel] = useState<string>("");
 
   const { commonCodeMap } = useCommonCodeMap(["APPROVAL_TARGET"]);
-
-  const showActions =
-    approval.status === "PENDING" &&
-    approval.step === approval.current_pending_step &&
-    approval.approver_id === currentUserId;
-
-  console.log("🧪 승인 버튼 조건 검사", {
-    status: approval.status,
-    step: approval.step,
-    current_pending_step: approval.current_pending_step,
-    approver_id: approval.approver_id,
-    currentUserId,
-    showActions,
-  });
 
   useEffect(() => {
     if (!targetId || !targetType) return;
@@ -137,11 +118,8 @@ function ApprovalCard({
           createdAt,
           dueDate,
           data,
-          onApprove,
-          onReject,
           approval,
           currentUserId,
-          showActions,
         })
       }
     >
@@ -165,36 +143,6 @@ function ApprovalCard({
           <p className="text-sm text-gray-500 italic">
             🔒 결재 라인: <span className="font-medium">{approverLabel}</span>
           </p>
-        )}
-
-        {showActions && (
-          <div className="flex items-center gap-2">
-            {onApprove && (
-              <Button
-                className="bg-green-500 text-white hover:bg-green-600"
-                onClick={onApprove}
-              >
-                승인
-              </Button>
-            )}
-            {onReject && (
-              <>
-                <input
-                  type="text"
-                  placeholder="반려 사유"
-                  value={rejectMemo}
-                  onChange={(e) => setRejectMemo(e.target.value)}
-                  className="border rounded px-2 py-1 text-sm w-48"
-                />
-                <Button
-                  variant="destructive"
-                  onClick={() => onReject(rejectMemo)}
-                >
-                  반려
-                </Button>
-              </>
-            )}
-          </div>
         )}
       </CardContent>
     </Card>

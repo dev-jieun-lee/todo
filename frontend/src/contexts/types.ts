@@ -17,6 +17,9 @@ export type UserContextType = {
     email: string;
     token: string;
     role: RoleType;
+    employee_number: string;
+    department_code?: string;
+    position_code?: string;
   }) => void;
   logout: () => void;
   updateToken: (newToken: string) => void;

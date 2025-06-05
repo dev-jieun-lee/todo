@@ -1,4 +1,11 @@
 //결재 흐름과 카드 요약 전용
+
+export type ApproverInfo = {
+  name: string;
+  id: number;
+  status?: "PENDING" | "APPROVED" | "REJECTED"; // 승인 상태 추가
+  approvedAt?: string; // 승인 일시 추가 (ISO 날짜 문자열 등)
+};
 export interface VacationSummary {
   start_date: string;
   end_date: string;
@@ -66,6 +73,7 @@ export interface ApprovalCardProps {
 }
 
 export interface ApprovalItem {
+  currentApproverId: number | undefined;
   id: number;
   targetType: string;
   targetId: number;
@@ -95,6 +103,7 @@ export interface ApprovalHistoryItem {
 
 // 휴가 상세 보기용 데이터 타입 (결재 상세용)
 export interface VacationDetailData {
+  id?: number;
   created_at?: string;
   snapshot_department_label?: string;
   employee_number?: string;
@@ -108,5 +117,21 @@ export interface VacationDetailData {
   reason?: string;
   note?: string;
   type_code: string;
-  approvers: Record<string, string>;
+  approvers: {
+    manager?: ApproverInfo;
+    partLead?: ApproverInfo;
+    teamLead?: ApproverInfo;
+    deptHead?: ApproverInfo;
+    ceo?: ApproverInfo;
+    [key: string]: ApproverInfo | undefined;
+  };
+  currentApproverId?: number;
+  approverIds?: {
+    manager?: number;
+    partLead?: number;
+    teamLead?: number;
+    deptHead?: number;
+    ceo?: number;
+    [key: string]: number | undefined;
+  };
 }

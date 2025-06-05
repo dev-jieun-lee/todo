@@ -12,13 +12,14 @@ const getApproversForTarget = async (
   req = null,
   user = null
 ) => {
-  // 1단계: 결재자 직접 지정된 목록 조회
+  // 1단계: 결재자 직접 지정된 목록 조회 (status, approved_at 포함!)
   const approverRows = await dbAll(
-    `SELECT a.step, u.name, u.position_code, cc.label AS position_label
+    `SELECT a.step, u.name, u.position_code, a.approver_id, cc.label AS position_label,
+            a.status, a.approved_at
      FROM approvals a
      JOIN users u ON a.approver_id = u.id
      LEFT JOIN common_codes cc ON cc.code_group = 'POSITION' AND cc.code = u.position_code
-     WHERE a.target_type = ? AND a.target_id = ?
+     WHERE UPPER(a.target_type) = UPPER(?) AND a.target_id = ?
      ORDER BY a.step ASC`,
     [targetType, targetId]
   );
@@ -26,24 +27,30 @@ const getApproversForTarget = async (
   // 2단계: 직급 코드 기준 approvers 구성
   const approvers = {};
   for (const row of approverRows) {
+    let role = "";
     switch (row.position_code) {
       case "DEPHEAD":
-        approvers.partLead = `${row.position_label} ${row.name}`;
+        role = "partLead";
         break;
       case "LEAD":
-        approvers.teamLead = `${row.position_label} ${row.name}`;
+        role = "teamLead";
         break;
       case "DIR":
       case "EVP":
-        approvers.deptHead = `${row.position_label} ${row.name}`;
+        role = "deptHead";
         break;
       case "CEO":
-        approvers.ceo = `${row.position_label} ${row.name}`;
+        role = "ceo";
         break;
       default:
-        if (!approvers.manager)
-          approvers.manager = `${row.position_label} ${row.name}`;
+        role = "manager";
     }
+    // 3단계: 누락된 역할 자동 보완 (common_codes의 sort_order 기준)
+    const fallbackRoles = [
+      { key: "partLead", label: "파트장", sortMin: 5, sortMax: 5 },
+      { key: "teamLead", label: "팀장", sortMin: 4, sortMax: 4 },
+      { key: "deptHead", label: "부서장", sortMin: 2, sortMax: 3 },
+    ];
   }
 
   // 3단계: 누락된 역할 자동 보완 (common_codes의 sort_order 기준)
@@ -55,8 +62,9 @@ const getApproversForTarget = async (
 
   for (const { key, label, sortMin, sortMax } of fallbackRoles) {
     if (!approvers[key] && departmentCode) {
+      // 1) 우선 backup(후보자) 찾기
       const backup = await dbGet(
-        `SELECT u.name, u.position_code, cc.label AS position_label
+        `SELECT u.name, u.position_code, u.id as approver_id, cc.label AS position_label
          FROM users u
          JOIN common_codes cc ON cc.code_group = 'POSITION' AND cc.code = u.position_code
          WHERE u.status = 'ACTIVE' AND u.department_code = ? AND cc.sort_order BETWEEN ? AND ?
@@ -68,15 +76,28 @@ const getApproversForTarget = async (
         console.warn(
           `⚠️ [결재자 자동 보완 실패] ${key} 없음 - 부서: ${departmentCode}, 직급: ${label} (sort_order ${sortMin}~${sortMax})`
         );
-        continue; // backup 없을 경우 그냥 넘어감
+        continue;
       }
 
-      approvers[key] = `${backup.position_label} ${backup.name}`;
+      // 2) 이 backup이 실제 결재라인에 이미 등록돼 있는지 확인
+      const approvalRow = await dbGet(
+        `SELECT status, approved_at FROM approvals
+         WHERE UPPER(target_type) = UPPER(?) AND target_id = ? AND approver_id = ?`,
+        [targetType, targetId, backup.approver_id]
+      );
+
+      approvers[key] = {
+        name: `${backup.position_label} ${backup.name}`,
+        id: backup.approver_id,
+        status: approvalRow ? approvalRow.status : "PENDING",
+        approvedAt: approvalRow ? approvalRow.approved_at : null,
+      };
+
       logSystemAction(
         req,
-        user, // user를 직접 받도록 바꿈!
+        user,
         LOG_ACTIONS.APPROVER_AUTO_FILL,
-        `자동 보완된 결재자 ${key}: ${approvers[key]}`,
+        `자동 보완된 결재자 ${key}: ${JSON.stringify(approvers[key])}`,
         "info"
       );
     }
@@ -94,7 +115,7 @@ exports.approve = async (req, res) => {
     // 1단계: 현재 결재 대상 상태 확인
     const row = await dbGet(
       `SELECT id, status, is_final, step FROM approvals
-       WHERE LOWER(target_type) = LOWER(?) AND target_id = ? AND approver_id = ?`,
+       WHERE UPPER(target_type) = UPPER(?) AND target_id = ? AND approver_id = ?`,
       [targetType, targetId, userId]
     );
 
@@ -110,7 +131,7 @@ exports.approve = async (req, res) => {
     // 2단계: 결재 순서 검증 (내 차례인지 확인 ,선행 단계 확인)
     const minStepRow = await dbGet(
       `SELECT MIN(step) as minStep FROM approvals
-       WHERE target_type = ? AND target_id = ? AND status = 'PENDING'`,
+       WHERE UPPER(target_type) = UPPER(?) AND target_id = ? AND status = 'PENDING'`,
       [targetType, targetId]
     );
 
@@ -220,7 +241,7 @@ exports.approve = async (req, res) => {
       const nextStepSql = `
     UPDATE approvals
     SET current_pending_step = ?
-    WHERE target_type = ? AND target_id = ? AND step = ?`;
+    WHERE UPPER(target_type) = UPPER(?) AND target_id = ? AND step = ?`;
 
       const nextStepParams = [
         currentStep + 1,
@@ -286,7 +307,7 @@ exports.reject = async (req, res) => {
     // 2단계: 선행 결재 확인 (내 차례인지 검증)
     const minStepRow = await dbGet(
       `SELECT MIN(step) as minStep FROM approvals
-   WHERE target_type = ? AND target_id = ? AND status = 'PENDING'`,
+   WHERE UPPER(target_type) = UPPER(?) AND target_id = ? AND status = 'PENDING'`,
       [targetType, targetId]
     );
 
@@ -354,7 +375,7 @@ exports.reject = async (req, res) => {
     const skipSql = `
     UPDATE approvals
     SET status = 'SKIPPED', approved_at = datetime('now')
-    WHERE target_type = ? AND target_id = ? AND status = 'PENDING'`;
+    WHERE UPPER(target_type) = UPPER(?) AND target_id = ? AND status = 'PENDING'`;
     await dbRun(skipSql, [targetType, targetId]);
     logSystemAction(
       req,
@@ -368,7 +389,7 @@ exports.reject = async (req, res) => {
     const clearStepSql = `
   UPDATE approvals
   SET current_pending_step = NULL
-  WHERE target_type = ? AND target_id = ?`;
+  WHERE UPPER(target_type) = UPPER(?) AND target_id = ?`;
     await dbRun(clearStepSql, [targetType, targetId]);
     logSystemAction(
       req,
@@ -421,7 +442,7 @@ exports.getApprovalHistory = async (req, res) => {
       LEFT JOIN users u ON a.actor_id = u.id
       LEFT JOIN common_codes d ON d.code_group = 'DEPARTMENT' AND d.code = u.department_code
       LEFT JOIN common_codes p ON p.code_group = 'POSITION' AND p.code = u.position_code
-      WHERE a.target_type = ? AND a.target_id = ?
+      WHERE UPPER(a.target_type) = UPPER(?) AND a.target_id = ?
       ORDER BY a.performed_at DESC`;
 
     const params = [targetType, targetId];
@@ -461,7 +482,7 @@ exports.getMyApprovalDocuments = async (req, res) => {
   const params = [userId];
 
   if (target_type) {
-    sql += ` AND LOWER(target_type) = ?`;
+    sql += ` AND UPPER(target_type) = UPPER(?)`;
     params.push(target_type.toLowerCase());
   }
 
@@ -480,12 +501,12 @@ exports.getMyApprovalDocuments = async (req, res) => {
     const enriched = await Promise.all(
       rows.map(async (row) => {
         let data = null;
-        if (row.target_type === "vacation") {
+        if ((row.target_type || "").toUpperCase() === "VACATION") {
           data = await dbGet(
             `SELECT start_date, end_date, type_code AS type_label FROM vacations WHERE id = ?`,
             [row.target_id]
           );
-        } else if (row.target_type === "kpi") {
+        } else if ((row.target_type || "").toUpperCase() === "KPI") {
           data = await dbGet(
             `SELECT goal_title, period FROM kpis WHERE id = ?`,
             [row.target_id]
@@ -576,8 +597,27 @@ exports.getApprovalDetail = async (req, res) => {
     let data = null;
     let departmentCode = null;
     let positionCode = null;
+    let currentApproverId = null;
 
-    if (targetType === "vacation") {
+    // approval 테이블에서 결재진행 정보 조회
+    const approvalRow = await dbGet(
+      `SELECT status, current_pending_step
+           FROM approvals
+            WHERE UPPER(target_type) = UPPER(?) AND target_id = ?
+           ORDER BY step ASC LIMIT 1`,
+      [targetType, targetId]
+    );
+
+    if (approvalRow && approvalRow.current_pending_step) {
+      const stepRow = await dbGet(
+        `SELECT approver_id FROM approvals
+     WHERE UPPER(target_type) = UPPER(?) AND target_id = ? AND step = ?`,
+        [targetType, targetId, approvalRow.current_pending_step]
+      );
+      if (stepRow) currentApproverId = stepRow.approver_id;
+    }
+
+    if ((targetType || "").toUpperCase() === "VACATION") {
       data = await dbGet(
         `SELECT v.start_date, v.end_date, v.type_code, v.reason, v.note, v.created_at,
                 v.snapshot_name, v.snapshot_department_code, v.snapshot_position_code, u.employee_number
@@ -598,8 +638,13 @@ exports.getApprovalDetail = async (req, res) => {
           req,
           req.user
         );
+        data.approverIds = {};
+        Object.entries(data.approvers).forEach(([role, info]) => {
+          data.approverIds[role] = info.id;
+        });
+        data.currentApproverId = currentApproverId;
       }
-    } else if (targetType === "kpi") {
+    } else if ((targetType || "").toUpperCase() === "KPI") {
       data = await dbGet(`SELECT goal_title, period FROM kpis WHERE id = ?`, [
         targetId,
       ]);
@@ -608,7 +653,7 @@ exports.getApprovalDetail = async (req, res) => {
         `SELECT u.department_code, u.position_code
          FROM approvals a
          JOIN users u ON a.requester_id = u.id
-         WHERE a.target_type = ? AND a.target_id = ?
+         WHERE UPPER(a.target_type) = UPPER(?) AND a.target_id = ?
          LIMIT 1`,
         [targetType, targetId]
       );
@@ -640,6 +685,11 @@ exports.getApprovalDetail = async (req, res) => {
       id: Number(targetId),
       targetType,
       targetId: Number(targetId),
+      status: approvalRow ? approvalRow.status : null,
+      current_pending_step: approvalRow
+        ? approvalRow.current_pending_step
+        : null,
+      currentApproverId,
       data,
     });
   } catch (err) {
@@ -677,7 +727,7 @@ exports.getRequestedApprovals = async (req, res) => {
   const params = [userId];
 
   if (target_type) {
-    sql += ` AND LOWER(a.target_type) = ?`;
+    sql += ` AND  UPPER(target_type) = UPPER(?)`;
     params.push(target_type.toLowerCase());
   }
 
@@ -700,7 +750,7 @@ exports.getRequestedApprovals = async (req, res) => {
       rows.map(async (row) => {
         let data = null;
 
-        if ((row.target_type || "").toLowerCase() === "vacation") {
+        if ((row.target_type || "").toUpperCase() === "VACATION") {
           data = await dbGet(
             `SELECT
                 v.start_date,
@@ -713,12 +763,12 @@ exports.getRequestedApprovals = async (req, res) => {
              WHERE v.id = ?`,
             [row.target_id]
           );
-        } else if ((row.target_type || "").toLowerCase() === "kpi") {
+        } else if ((row.target_type || "").toUpperCase() === "KPI") {
           data = await dbGet(
             `SELECT goal_title, period FROM kpis WHERE id = ?`,
             [row.target_id]
           );
-        } else if ((row.target_type || "").toLowerCase() === "notice") {
+        } else if ((row.target_type || "").toUpperCase() === "NOTICE") {
           data = await dbGet(
             `SELECT title, target_role AS target_label FROM notices WHERE id = ?`,
             [row.target_id]

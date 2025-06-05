@@ -5,7 +5,7 @@ import UnsupportedDetailContent from "./detailForms/UnsupportedDetailContent";
 interface UnifiedApprovalDetailContentProps {
   targetType: string;
   data: ApprovalData | VacationDetailData;
-  commonCodeMap: Record<string, { code: string; label: string }[]>; //
+  commonCodeMap: Record<string, { code: string; label: string }[]>;
 }
 
 function isVacationDetailData(data: unknown): data is VacationDetailData {
@@ -20,11 +20,11 @@ function isVacationDetailData(data: unknown): data is VacationDetailData {
 export default function UnifiedApprovalDetailContent({
   targetType,
   data,
-  commonCodeMap, //
+  commonCodeMap,
 }: UnifiedApprovalDetailContentProps) {
   console.log("🧪 targetType:", targetType);
-  console.log("🧾 data received in UnifiedApprovalDetailContent:", data); // ✅ [2] 여기
-  console.log("🧪 isVacationDetailData result:", isVacationDetailData(data)); // ✅ [3] 여기
+  console.log("🧾 data received in UnifiedApprovalDetailContent:", data);
+  console.log("🧪 isVacationDetailData result:", isVacationDetailData(data));
 
   switch (targetType) {
     case "VACATION":
@@ -33,7 +33,7 @@ export default function UnifiedApprovalDetailContent({
           <VacationDetailContent
             data={data}
             approvers={data.approvers}
-            commonCodeMap={commonCodeMap} // 전달
+            commonCodeMap={commonCodeMap}
           />
         );
       }
