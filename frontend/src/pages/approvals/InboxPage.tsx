@@ -4,17 +4,13 @@ import api from "../../utils/axiosInstance";
 import { toast } from "react-toastify";
 import { useEffect, useState } from "react";
 import type { ApprovalItem } from "../../types/approval";
-import useCommonCodeMap from "../../hooks/useCommonCodeMap";
+import { useCommonCodeMap } from "../../contexts/CommonCodeContext";
 import { useUser } from "../../contexts/useUser";
 
 export default function InboxPage() {
   const { id } = useUser();
   console.log("Inbox currentUserId:", id);
-  const { commonCodeMap } = useCommonCodeMap([
-    "VACATION_TYPE",
-    "POSITION",
-    "DEPARTMENT",
-  ]);
+  const commonCodeMap = useCommonCodeMap();
 
   const [refreshKey, setRefreshKey] = useState(Date.now());
   const [selectedItem, setSelectedItem] = useState<ApprovalItem | null>(null);

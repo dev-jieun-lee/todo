@@ -4,7 +4,7 @@ import type { VacationDetailData, ApproverInfo } from "../../../types/approval";
 
 interface Props {
   data: VacationDetailData;
-  approvers: Record<string, string | ApproverInfo | undefined>;
+  approvers: Record<string, unknown>;
   commonCodeMap: Record<string, { code: string; label: string }[]>;
   isMyTurn?: boolean;
   currentUserId?: number;
@@ -24,7 +24,7 @@ export default function VacationDetailContent({
   approvers,
   commonCodeMap,
 }: Props) {
-  // approvers.step1, step2 → 항상 ApproverInfo 객체로 변환
+  // approvalController에서 proxy_type, proxy_role이 내려온다고 가정
   const mappedApprovers = {
     manager: toApproverInfo(approvers.manager || approvers.step1),
     partLead: toApproverInfo(approvers.partLead || approvers.step2),
@@ -35,7 +35,6 @@ export default function VacationDetailContent({
   return (
     <VacationDetailView
       data={data}
-      //approverIds={data.approverIds}
       approvers={mappedApprovers}
       commonCodeMap={commonCodeMap}
     />

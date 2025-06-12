@@ -3,9 +3,12 @@
 export type ApproverInfo = {
   name: string;
   id: number;
-  status?: "PENDING" | "APPROVED" | "REJECTED"; // 승인 상태 추가
-  approvedAt?: string; // 승인 일시 추가 (ISO 날짜 문자열 등)
+  status?: "PENDING" | "APPROVED" | "REJECTED" | "SKIPPED";
+  approvedAt?: string; // 승인 일시
+  proxy_type?: "ORIGINAL" | "PROXY" | "DELEGATE" | "SKIP"; // 추가
+  proxy_role?: string; // 전결 시 실제 결재자 역할 코드
 };
+
 export interface VacationSummary {
   start_date: string;
   end_date: string;
@@ -65,7 +68,6 @@ export interface ApprovalCardProps {
   approval: {
     status: string;
     step: number;
-    current_pending_step: number | null;
     approver_id: number;
   };
   currentUserId: number;
@@ -83,7 +85,6 @@ export interface ApprovalItem {
   data: ApprovalData;
   status: string;
   step: number;
-  current_pending_step: number | null;
   approver_id: number;
 }
 

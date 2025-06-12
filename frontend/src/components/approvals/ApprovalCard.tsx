@@ -1,11 +1,11 @@
 // src/components/approvals/ApprovalCard.tsx
-//import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "../ui/card";
-import { Badge } from "../ui/badge";
 import { useState, useEffect } from "react";
 import api from "../../utils/axiosInstance";
-import useCommonCodeMap from "../../hooks/useCommonCodeMap";
+import { useCommonCodeMap } from "../../contexts/CommonCodeContext";
+import { getStatusBadge } from "../../utils/getStatusBadge";
 import type {
+  ApproverInfo,
   ApprovalCardProps,
   ApprovalData,
   VacationSummary,
@@ -14,11 +14,13 @@ import type {
   ProjectData,
   TransferData,
   DocumentData,
+  // ExpenseData,
 } from "../../types/approval";
 
+// 문서 유형 요약 텍스트 생성
 const getSummaryText = (targetType: string, data: ApprovalData): string => {
   try {
-    switch (targetType.toUpperCase()) {
+    switch (targetType?.toUpperCase()) {
       case "VACATION": {
         const d = data as VacationSummary;
         return `${d.start_date} ~ ${d.end_date} (${d.type_label})`;
@@ -27,7 +29,6 @@ const getSummaryText = (targetType: string, data: ApprovalData): string => {
         const d = data as KpiData;
         return `KPI: ${d.goal_title} (${d.period})`;
       }
-
       case "NOTICE": {
         const d = data as NoticeData;
         return `공지: ${d.title} · 수신 대상: ${d.target_label}`;
@@ -67,15 +68,14 @@ function ApprovalCard({
   approval: {
     status: string;
     step: number;
-    current_pending_step: number | null;
     approver_id: number;
   };
   currentUserId: number;
 }) {
   const [approverLabel, setApproverLabel] = useState<string>("");
+  const commonCodeMap = useCommonCodeMap();
 
-  const { commonCodeMap } = useCommonCodeMap(["APPROVAL_TARGET"]);
-
+  // 결재라인 요약 fetch
   useEffect(() => {
     if (!targetId || !targetType) return;
 
@@ -83,27 +83,35 @@ function ApprovalCard({
       .get(`/approvals/${targetType.toLowerCase()}/${targetId}/detail`)
       .then((res) => {
         const approvers = res.data?.data?.approvers || {};
-
-        const roleLabelMap: Record<string, string> = {
-          partLead: "파트장",
-          teamLead: "팀장",
-          deptHead: "부서장",
+        // 결재라인 key → POSITION 코드로 변환 테이블
+        const positionCodeMap: Record<string, string> = {
+          manager: "MANAGER",
+          partLead: "PART_LEAD",
+          teamLead: "TEAM_LEAD",
+          deptHead: "DEPT_HEAD",
+          ceo: "CEO",
         };
-
+        // 결재자 이름이 있는 항목만 추출(공통코드 POSITION label 적용)
         const labelList = Object.entries(approvers)
-          .filter(([, name]) => name)
-          .map(([key, name]) => {
-            const label = roleLabelMap[key] || key;
-            return `${label}: ${name}`;
+          .filter(([, a]) => (a as ApproverInfo)?.name)
+          .map(([key, a]) => {
+            const positionCode = positionCodeMap[key] || key.toUpperCase();
+            const positionLabel =
+              commonCodeMap["POSITION"]?.find((p) => p.code === positionCode)
+                ?.label || positionCode;
+            return `${positionLabel}: ${(a as ApproverInfo).name}`;
           });
-
         setApproverLabel(labelList.join(" / "));
       })
       .catch(() => {
-        console.warn("결재자 정보 불러오기 실패");
+        setApproverLabel("");
       });
-  }, [targetId, targetType]);
+  }, [targetId, targetType, commonCodeMap]);
 
+  // 상태 badge
+  const badge = getStatusBadge(approval.status, commonCodeMap);
+
+  // 요약 텍스트 (확장성 O)
   const summary =
     data && targetType ? getSummaryText(targetType, data) : "(요약 정보 없음)";
 
@@ -125,12 +133,28 @@ function ApprovalCard({
     >
       <CardContent className="space-y-2">
         <div className="flex justify-between items-center">
+          {/* 문서유형 라벨(공통코드 기반) */}
           <h3 className="text-lg font-semibold">
             {commonCodeMap["APPROVAL_TARGET"]?.find(
               (c) => c.code === targetType.toUpperCase()
             )?.label || targetType}
           </h3>
-          <Badge variant="outline">신청자: {requesterName}</Badge>
+          {/* 상태 badge */}
+          <span
+            style={{
+              background: badge.bg,
+              color: badge.color,
+              fontWeight: 600,
+              fontSize: 13,
+              borderRadius: 4,
+              padding: "1px 8px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+            }}
+          >
+            {badge.icon} {badge.label}
+          </span>
         </div>
         <div className="text-sm text-gray-600">
           요청일: {createdAt} {dueDate && <> · 마감일: {dueDate}</>}
@@ -138,7 +162,7 @@ function ApprovalCard({
         <p className="text-sm text-gray-800">
           {summary || "(데이터 없음 또는 미지원 유형)"}
         </p>
-
+        {/* 결재라인(approverLabel) */}
         {approverLabel && (
           <p className="text-sm text-gray-500 italic">
             🔒 결재 라인: <span className="font-medium">{approverLabel}</span>

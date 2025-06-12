@@ -19,7 +19,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [department_code, setDepartmentCode] = useState<string>("");
   const [position_code, setPositionCode] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(true);
-
+  const [team_code, setTeamCode] = useState<string>("");
   // 🟢 로그인 함수 (여기서 id/username 등 찍기!)
   const login: UserContextType["login"] = (user) => {
     console.log("[login] 전달된 값:", user);
@@ -30,6 +30,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     setEmail(user.email ?? "");
     setToken(user.token);
     setRole(user.role);
+    setTeamCode(user.team_code ?? "");
     setDepartmentCode(user.department_code ?? "");
     setPositionCode(user.position_code ?? "");
     setAccessToken(user.token);
@@ -45,6 +46,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       role: user.role,
       department_code: user.department_code ?? "",
       position_code: user.position_code ?? "",
+      team_code: user.team_code ?? "",
     };
     console.log("[login] localStorage에 저장할 값:", authObj);
     localStorage.setItem("auth", JSON.stringify(authObj));
@@ -68,6 +70,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     setRole("user");
     setDepartmentCode("");
     setPositionCode("");
+    setTeamCode("");
     localStorage.removeItem("auth");
     setAccessToken(""); // 메모리 토큰 초기화
   };
@@ -86,6 +89,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         role,
         department_code,
         position_code,
+        team_code,
       } = JSON.parse(stored);
 
       console.log("🗂️ [초기 로딩] localStorage auth 값:", {
@@ -98,6 +102,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         role,
         department_code,
         position_code,
+        team_code,
       });
 
       if (token) setAccessToken(token);
@@ -114,6 +119,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         setEmail(email ?? "");
         setToken(token);
         setRole(role);
+        setTeamCode(team_code ?? "");
         setDepartmentCode(department_code ?? "");
         setPositionCode(position_code ?? "");
         setIsLoading(false); // 복원 완료 후 로딩 종료
@@ -164,6 +170,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         role,
         department_code,
         position_code,
+        team_code,
         login,
         logout,
         updateToken,

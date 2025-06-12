@@ -4,17 +4,14 @@ import UnifiedApprovalDetailInlineView from "../../components/approvals/UnifiedA
 import api from "../../utils/axiosInstance";
 import { toast } from "react-toastify";
 import type { ApprovalItem } from "../../types/approval";
-import useCommonCodeMap from "../../hooks/useCommonCodeMap";
+// import useCommonCodeMap from "../../hooks/useCommonCodeMap";
+import { useCommonCodeMap } from "../../contexts/CommonCodeContext";
+
 import { useUser } from "../../contexts/useUser";
 export default function RequestedPage() {
   const [selectedItem, setSelectedItem] = useState<ApprovalItem | null>(null);
   const { id } = useUser();
-  const { commonCodeMap } = useCommonCodeMap([
-    "VACATION_TYPE",
-    "POSITION",
-    "DEPARTMENT",
-  ]);
-
+  const commonCodeMap = useCommonCodeMap();
   useEffect(() => {
     api
       .get(`/approvals/requested-by-me`)

@@ -1,15 +1,8 @@
-// models/vacationModel.js
-const { dbGet } = require("../utils/dbHelpers");
 const { logSystemAction } = require("../utils/handleError");
 const { LOG_ACTIONS } = require("../utils/logActions");
-
-/**
- * 중복 휴가 존재 여부 검사 (async/await 버전)
- * - 연차(FULL): 날짜만 검사
- * - 반차/시차(HALF/HOUR): 날짜 + 시간 겹침 여부 검사
- */
+const { dbGet } = require("../utils/dbHelpers");
 exports.findOverlappingVacation = async (
-  req, // log 기록용
+  req,
   userId,
   startDate,
   endDate,
@@ -45,8 +38,11 @@ exports.findOverlappingVacation = async (
           )
         )
       )
-    LIMIT 1
   `;
+
+  // 시간 단위가 FULL인 경우는 시간 겹침 검사 필요 없으므로 startTime/endTime을 빈값으로 처리
+  const stTime = durationUnit === "FULL" ? null : startTime || "00:00";
+  const edTime = durationUnit === "FULL" ? null : endTime || "23:59";
 
   const params = [
     userId,
@@ -60,38 +56,49 @@ exports.findOverlappingVacation = async (
 
     // 시간 기준 겹침 검사 (HOUR, HALF)
     startDate,
-    endTime || "00:00",
-    startTime || "23:59",
+    edTime,
+    stTime,
   ];
+
   logSystemAction(
     req,
-    req.user, // 사용자 정보 (req.user에서 가져옴)
-    LOG_ACTIONS.VALIDATE, // 중복 검사를 위한 로그 액션 (유효성 검사)
+    req.user ?? { id: userId },
+    LOG_ACTIONS.VALIDATE,
     `중복검사 요청 파라미터: 사용자 ID ${userId}, 시작일자 ${startDate}, 종료일자 ${endDate}, 시작시간 ${startTime}, 종료시간 ${endTime}, 시간단위 ${durationUnit}`,
-    "info" // 로그 레벨: 정보
+    "info"
   );
+  // 로그는 반드시 sql, params 선언 후 출력
+  console.log("findOverlappingVacation 쿼리:", sql);
+  console.log("파라미터:", params);
+
   try {
     const row = await dbGet(sql, params);
 
     if (row) {
       logSystemAction(
         req,
-        req.user,
+        req.user ?? { id: userId },
         LOG_ACTIONS.VALIDATE_FAIL,
         "휴가 중복됨",
         "warn"
       );
     } else {
-      logSystemAction(req, req.user, LOG_ACTIONS.VALIDATE, "중복 없음", "info");
+      logSystemAction(
+        req,
+        req.user ?? { id: userId },
+        LOG_ACTIONS.VALIDATE,
+        "중복 없음",
+        "info"
+      );
     }
 
     return row;
   } catch (err) {
     logSystemAction(
       req,
-      req.user,
+      req.user ?? { id: userId },
       LOG_ACTIONS.ERROR,
-      "중복 검사 쿼리 실패",
+      `중복 검사 쿼리 실패: ${err.message}`,
       "error"
     );
     throw err;

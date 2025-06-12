@@ -9,4 +9,5 @@ export interface VacationFormState {
   start_time: string;
   end_time: string;
   duration_unit: string;
+  approvers?: Record<number, number>;
 }

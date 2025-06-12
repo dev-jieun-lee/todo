@@ -49,4 +49,10 @@ router.get(
   approvalController.getApprovalDetail
 );
 
+// approval_lines 조회 API 추가 (approvalController에서 getApprovalLines를 호출)
+router.get(
+  "/approval-lines",
+  authenticateToken,
+  approvalController.getApprovalLines
+);
 module.exports = router;

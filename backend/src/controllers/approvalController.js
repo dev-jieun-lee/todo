@@ -2,8 +2,11 @@
 const { logSystemAction } = require("../utils/handleError");
 const { LOG_ACTIONS } = require("../utils/logActions");
 const { dbGet, dbAll, dbRun } = require("../utils/dbHelpers");
-
-//결재라인 api  approver 역할별 자동 fallback 포함
+/**
+ * 결재자 fallback 자동보완 (partLead/teamLead/...)
+ * @desc 결재자 미지정시 부서/직급별 자동 후보 검색
+ * @returns {Promise<Object>} approvers 객체(role별)
+ */
 const getApproversForTarget = async (
   targetType,
   targetId,
@@ -12,10 +15,10 @@ const getApproversForTarget = async (
   req = null,
   user = null
 ) => {
-  // 1단계: 결재자 직접 지정된 목록 조회 (status, approved_at 포함!)
+  // 1단계: 결재자 직접 지정된 목록 조회 (status, approved_at, proxy_type, proxy_role 포함!)
   const approverRows = await dbAll(
     `SELECT a.step, u.name, u.position_code, a.approver_id, cc.label AS position_label,
-            a.status, a.approved_at
+            a.status, a.approved_at, a.proxy_type, a.proxy_role
      FROM approvals a
      JOIN users u ON a.approver_id = u.id
      LEFT JOIN common_codes cc ON cc.code_group = 'POSITION' AND cc.code = u.position_code
@@ -45,12 +48,15 @@ const getApproversForTarget = async (
       default:
         role = "manager";
     }
-    // 3단계: 누락된 역할 자동 보완 (common_codes의 sort_order 기준)
-    const fallbackRoles = [
-      { key: "partLead", label: "파트장", sortMin: 5, sortMax: 5 },
-      { key: "teamLead", label: "팀장", sortMin: 4, sortMax: 4 },
-      { key: "deptHead", label: "부서장", sortMin: 2, sortMax: 3 },
-    ];
+    // 실제 할당(프론트 요구 shape, proxy_type, proxy_role 등 포함!)
+    approvers[role] = {
+      name: `${row.position_label} ${row.name}`,
+      id: row.approver_id,
+      status: row.status,
+      approvedAt: row.approved_at,
+      proxy_type: row.proxy_type || null,
+      proxy_role: row.proxy_role || null,
+    };
   }
 
   // 3단계: 누락된 역할 자동 보완 (common_codes의 sort_order 기준)
@@ -81,7 +87,7 @@ const getApproversForTarget = async (
 
       // 2) 이 backup이 실제 결재라인에 이미 등록돼 있는지 확인
       const approvalRow = await dbGet(
-        `SELECT status, approved_at FROM approvals
+        `SELECT status, approved_at, proxy_type, proxy_role FROM approvals
          WHERE UPPER(target_type) = UPPER(?) AND target_id = ? AND approver_id = ?`,
         [targetType, targetId, backup.approver_id]
       );
@@ -91,6 +97,8 @@ const getApproversForTarget = async (
         id: backup.approver_id,
         status: approvalRow ? approvalRow.status : "PENDING",
         approvedAt: approvalRow ? approvalRow.approved_at : null,
+        proxy_type: approvalRow ? approvalRow.proxy_type : null,
+        proxy_role: approvalRow ? approvalRow.proxy_role : null,
       };
 
       logSystemAction(
@@ -110,9 +118,14 @@ const getApproversForTarget = async (
 exports.approve = async (req, res) => {
   const { targetType, targetId } = req.params;
   const userId = req.user.id;
+  console.log("[approvalController/approve] 파라미터:", {
+    targetType,
+    targetId,
+    userId,
+  });
 
   try {
-    // 1단계: 현재 결재 대상 상태 확인
+    // 1단계: 현재 결재 대상 상태 확인 (PENDING만 승인 가능)
     const row = await dbGet(
       `SELECT id, status, is_final, step FROM approvals
        WHERE UPPER(target_type) = UPPER(?) AND target_id = ? AND approver_id = ?`,
@@ -125,10 +138,16 @@ exports.approve = async (req, res) => {
       return res.status(403).json({ error: msg });
     }
 
+    if (row.status !== "PENDING") {
+      const msg = `이미 처리된 결재라인입니다. (현재상태: ${row.status})`;
+      logSystemAction(req, req.user, LOG_ACTIONS.APPROVE_FAIL, msg, "warn");
+      return res.status(400).json({ error: msg });
+    }
+
     const currentStep = row.step;
     const approvalId = row.id;
 
-    // 2단계: 결재 순서 검증 (내 차례인지 확인 ,선행 단계 확인)
+    // 2단계: 결재 순서 검증 (내 차례인지, 선행단계 완료 확인)
     const minStepRow = await dbGet(
       `SELECT MIN(step) as minStep FROM approvals
        WHERE UPPER(target_type) = UPPER(?) AND target_id = ? AND status = 'PENDING'`,
@@ -137,20 +156,22 @@ exports.approve = async (req, res) => {
 
     if (currentStep > minStepRow.minStep) {
       const msg = `이전 단계 결재 미완료 (현재 step=${currentStep}, 최소 step=${minStepRow.minStep})`;
-      logSystemAction(
-        req,
-        req.user,
-        LOG_ACTIONS.APPROVE_FAIL,
-        "결재 권한 없음",
-        "error"
-      );
+      logSystemAction(req, req.user, LOG_ACTIONS.APPROVE_FAIL, msg, "error");
       return res
         .status(400)
         .json({ error: "이전 단계 결재가 완료되지 않았습니다." });
     }
+    console.log(
+      "[approvalController/approve] 승인 처리 전 status:",
+      row.status
+    );
 
     // 3단계: 승인 처리 및 이력 기록
-    const updateSql = `UPDATE approvals SET status = 'APPROVED', approved_at = datetime('now') WHERE id = ?`;
+    const updateSql = `
+      UPDATE approvals
+      SET status = 'APPROVED', approved_at = datetime('now')
+      WHERE id = ?
+    `;
     await dbRun(updateSql, [approvalId]);
     logSystemAction(
       req,
@@ -162,10 +183,11 @@ exports.approve = async (req, res) => {
 
     // 승인 이력 기록
     const insertHistorySql = `
-     INSERT INTO approval_history (
-       approval_id, target_type, target_id, step,
-       action, memo, actor_id, prev_status, new_status
-     ) VALUES (?, ?, ?, ?, 'APPROVE', '', ?, 'PENDING', 'APPROVED')`;
+      INSERT INTO approval_history (
+        approval_id, target_type, target_id, step,
+        action, memo, actor_id, prev_status, new_status
+      ) VALUES (?, ?, ?, ?, 'APPROVE', '', ?, 'PENDING', 'APPROVED')
+    `;
     await dbRun(insertHistorySql, [
       approvalId,
       targetType,
@@ -181,7 +203,7 @@ exports.approve = async (req, res) => {
       "info"
     );
 
-    // 4단계: 최종 승인자일 경우 → vacation 상태 업데이트 + 이력 기록
+    // 5단계: 최종 승인자일 경우 → vacation 등 target status 업데이트 + 이력 기록
     if (row.is_final === 1 && targetType.toLowerCase() === "vacation") {
       const vacationRow = await dbGet(
         `SELECT status, user_id FROM vacations WHERE id = ?`,
@@ -190,7 +212,10 @@ exports.approve = async (req, res) => {
 
       if (vacationRow) {
         const vacationUpdateSql = `
-          UPDATE vacations SET status = 'APPROVED', approved_by = ?, approved_at = datetime('now') WHERE id = ?`;
+          UPDATE vacations
+          SET status = 'APPROVED', approved_by = ?, approved_at = datetime('now')
+          WHERE id = ?
+        `;
         await dbRun(vacationUpdateSql, [userId, targetId]);
         logSystemAction(
           req,
@@ -203,7 +228,8 @@ exports.approve = async (req, res) => {
         const vacationHistorySql = `
           INSERT INTO vacation_history (
             vacation_id, user_id, action, old_value, new_value, memo, admin_id
-          ) VALUES (?, ?, 'APPROVE', ?, 'APPROVED', '최종 승인', ?)`;
+          ) VALUES (?, ?, 'APPROVE', ?, 'APPROVED', '최종 승인', ?)
+        `;
         await dbRun(vacationHistorySql, [
           targetId,
           vacationRow.user_id,
@@ -234,39 +260,6 @@ exports.approve = async (req, res) => {
           "error"
         );
       }
-    }
-
-    // 5. 다음 결재자에게 current_pending_step 넘기기 (최종 결재자가 아닌 경우)
-    if (row.is_final !== 1) {
-      const nextStepSql = `
-    UPDATE approvals
-    SET current_pending_step = ?
-    WHERE UPPER(target_type) = UPPER(?) AND target_id = ? AND step = ?`;
-
-      const nextStepParams = [
-        currentStep + 1,
-        targetType,
-        targetId,
-        currentStep + 1,
-      ];
-
-      await dbRun(nextStepSql, nextStepParams);
-
-      logSystemAction(
-        req,
-        req.user,
-        LOG_ACTIONS.APPROVE,
-        `SQL 실행: ${nextStepSql.trim()}, param=[${nextStepParams.join(", ")}]`,
-        "info"
-      );
-
-      logSystemAction(
-        req,
-        req.user,
-        LOG_ACTIONS.APPROVE,
-        `다음 결재자(current_step=${currentStep + 1})에게 넘김`,
-        "info"
-      );
     }
 
     // 6단계: 승인 성공 응답
@@ -301,13 +294,19 @@ exports.reject = async (req, res) => {
       return res.status(403).json({ error: msg });
     }
 
+    if (row.status !== "PENDING") {
+      const msg = `이미 처리된 결재라인입니다. (현재상태: ${row.status})`;
+      logSystemAction(req, req.user, LOG_ACTIONS.REJECT_FAIL, msg, "warn");
+      return res.status(400).json({ error: msg });
+    }
+
     const approvalId = row.id;
     const currentStep = row.step;
 
     // 2단계: 선행 결재 확인 (내 차례인지 검증)
     const minStepRow = await dbGet(
       `SELECT MIN(step) as minStep FROM approvals
-   WHERE UPPER(target_type) = UPPER(?) AND target_id = ? AND status = 'PENDING'`,
+       WHERE UPPER(target_type) = UPPER(?) AND target_id = ? AND status = 'PENDING'`,
       [targetType, targetId]
     );
 
@@ -319,10 +318,10 @@ exports.reject = async (req, res) => {
         .json({ error: "이전 단계 결재가 완료되지 않았습니다." });
     }
 
-    //본인 결재 라인 반려 처리
+    // 3단계: 본인 결재 라인 반려 처리
     const rejectSql = `
-    UPDATE approvals SET status = 'REJECTED', memo = ?, approved_at = datetime('now')
-    WHERE id = ?`;
+      UPDATE approvals SET status = 'REJECTED', memo = ?, approved_at = datetime('now')
+      WHERE id = ?`;
     await dbRun(rejectSql, [memo, approvalId]);
     logSystemAction(
       req,
@@ -331,7 +330,8 @@ exports.reject = async (req, res) => {
       `SQL 실행: ${rejectSql}, param=[${memo}, ${approvalId}]`,
       "info"
     );
-    // 3단계: // vacation 반려 처리
+
+    // 4단계: vacation 등 결재 대상도 REJECTED 처리(최종 결재자가 아니더라도)
     if (targetType.toLowerCase() === "vacation") {
       const vacationRejectSql = `UPDATE vacations SET status = 'REJECTED' WHERE id = ?`;
       await dbRun(vacationRejectSql, [targetId]);
@@ -351,9 +351,9 @@ exports.reject = async (req, res) => {
       // vacation 이력 기록
       if (vacationRow) {
         const vacationHistorySql = `
-        INSERT INTO vacation_history (
-          vacation_id, user_id, action, old_value, new_value, memo, admin_id
-        ) VALUES (?, ?, 'REJECTED', ?, 'REJECTED', ?, ?)`;
+          INSERT INTO vacation_history (
+            vacation_id, user_id, action, old_value, new_value, memo, admin_id
+          ) VALUES (?, ?, 'REJECTED', ?, 'REJECTED', ?, ?)`;
         await dbRun(vacationHistorySql, [
           targetId,
           vacationRow.user_id,
@@ -371,11 +371,11 @@ exports.reject = async (req, res) => {
       }
     }
 
-    // 4단계: 다른 모든 결재 라인 SKIPPED 처리
+    // 5단계: 다른 모든 결재 라인 SKIPPED 처리 (PENDING만)
     const skipSql = `
-    UPDATE approvals
-    SET status = 'SKIPPED', approved_at = datetime('now')
-    WHERE UPPER(target_type) = UPPER(?) AND target_id = ? AND status = 'PENDING'`;
+      UPDATE approvals
+      SET status = 'SKIPPED', approved_at = datetime('now')
+      WHERE UPPER(target_type) = UPPER(?) AND target_id = ? AND status = 'PENDING'`;
     await dbRun(skipSql, [targetType, targetId]);
     logSystemAction(
       req,
@@ -385,20 +385,7 @@ exports.reject = async (req, res) => {
       "info"
     );
 
-    // current_pending_step 초기화
-    const clearStepSql = `
-  UPDATE approvals
-  SET current_pending_step = NULL
-  WHERE UPPER(target_type) = UPPER(?) AND target_id = ?`;
-    await dbRun(clearStepSql, [targetType, targetId]);
-    logSystemAction(
-      req,
-      req.user,
-      LOG_ACTIONS.REJECT,
-      `SQL 실행: ${clearStepSql}, param=[${targetType}, ${targetId}]`,
-      "info"
-    );
-    // 5단계: 반려 이력 기록
+    //  6단계: 반려 이력 기록
     const insertHistorySql = `
       INSERT INTO approval_history (
         approval_id, target_type, target_id, step,
@@ -419,7 +406,8 @@ exports.reject = async (req, res) => {
       `SQL 실행: ${insertHistorySql}, param=[${approvalId}, ${targetType}, ${targetId}, ${currentStep}, ${memo}, ${userId}]`,
       "info"
     );
-    // 6단계: 성공 응답
+
+    // 7단계: 성공 응답
     res.json({ success: true });
   } catch (err) {
     const msg = `반려 실패: ${err.message}`;
@@ -472,7 +460,7 @@ exports.getMyApprovalDocuments = async (req, res) => {
   let sql = `
   SELECT
       a.id, a.target_type, a.target_id, a.status, a.step,
-      a.approver_id, a.current_pending_step, a.created_at, a.due_date,
+      a.approver_id, a.created_at, a.due_date,
       u.name AS requester_name
     FROM approvals a
     JOIN users u ON a.requester_id = u.id
@@ -521,7 +509,6 @@ exports.getMyApprovalDocuments = async (req, res) => {
           status: row.status,
           step: row.step,
           approver_id: row.approver_id,
-          current_pending_step: row.current_pending_step,
           createdAt: row.created_at,
           dueDate: row.due_date,
           data,
@@ -590,33 +577,22 @@ exports.getPositionLabel = async (req, res) => {
   }
 };
 
-// 상세 보기 API (approvers 항상 포함되도록 보완)
+// 상세 보기 API
 exports.getApprovalDetail = async (req, res) => {
   const { targetType, targetId } = req.params;
   try {
     let data = null;
     let departmentCode = null;
     let positionCode = null;
-    let currentApproverId = null;
 
-    // approval 테이블에서 결재진행 정보 조회
-    const approvalRow = await dbGet(
-      `SELECT status, current_pending_step
-           FROM approvals
-            WHERE UPPER(target_type) = UPPER(?) AND target_id = ?
-           ORDER BY step ASC LIMIT 1`,
+    // "누구 차례" 계산식
+    const pendingRow = await dbGet(
+      `SELECT step, approver_id, status FROM approvals
+       WHERE UPPER(target_type) = UPPER(?) AND target_id = ? AND status = 'PENDING'
+       ORDER BY step ASC LIMIT 1`,
       [targetType, targetId]
     );
-
-    if (approvalRow && approvalRow.current_pending_step) {
-      const stepRow = await dbGet(
-        `SELECT approver_id FROM approvals
-     WHERE UPPER(target_type) = UPPER(?) AND target_id = ? AND step = ?`,
-        [targetType, targetId, approvalRow.current_pending_step]
-      );
-      if (stepRow) currentApproverId = stepRow.approver_id;
-    }
-
+    const currentApproverId = pendingRow?.approver_id || null; // ★ 추가!
     if ((targetType || "").toUpperCase() === "VACATION") {
       data = await dbGet(
         `SELECT v.start_date, v.end_date, v.type_code, v.reason, v.note, v.created_at,
@@ -626,7 +602,7 @@ exports.getApprovalDetail = async (req, res) => {
          WHERE v.id = ?`,
         [targetId]
       );
-
+      console.log("pendingRow:", pendingRow);
       if (data) {
         departmentCode = data.snapshot_department_code;
         positionCode = data.snapshot_position_code;
@@ -685,11 +661,8 @@ exports.getApprovalDetail = async (req, res) => {
       id: Number(targetId),
       targetType,
       targetId: Number(targetId),
-      status: approvalRow ? approvalRow.status : null,
-      current_pending_step: approvalRow
-        ? approvalRow.current_pending_step
-        : null,
-      currentApproverId,
+      status: pendingRow ? pendingRow.status : null,
+      currentApproverId: currentApproverId, // 계산한 값
       data,
     });
   } catch (err) {
@@ -716,7 +689,6 @@ exports.getRequestedApprovals = async (req, res) => {
     a.status,
     a.step,
      a.approver_id,
-    a.current_pending_step,
     a.created_at,
     a.due_date,
     u.name AS requester_name
@@ -785,7 +757,6 @@ exports.getRequestedApprovals = async (req, res) => {
           status: row.status,
           step: row.step,
           approver_id: row.approver_id,
-          current_pending_step: row.current_pending_step,
           data,
           currentUserId: userId,
         };
@@ -803,5 +774,300 @@ exports.getRequestedApprovals = async (req, res) => {
       "error"
     );
     res.status(500).json({ error: "조회 실패" });
+  }
+};
+
+/**
+ * approval_lines 테이블을 기준으로 approvals(결재라인) 자동생성
+ * @param {Object} params - { targetType, targetId, applicant, req, routeName }
+ * @returns {Promise<Array>} 생성된 approvals row의 approverId 목록
+ * @desc 휴가/공지 등 결재 대상 생성 시 결재선 자동 생성 (approval_lines → approvals)
+ */
+exports.createApprovalLines = async ({
+  targetType,
+  targetId,
+  applicant,
+  req,
+  routeName = "basic", // ← 기본값이지만, 필요시 원하는 결재선명으로 호출 가능
+}) => {
+  try {
+    logSystemAction(
+      req,
+      applicant,
+      LOG_ACTIONS.READ,
+      `[결재선생성] 신청자 정보: id=${applicant.id}, dept=${applicant.department_code}, team=${applicant.team_code}, position=${applicant.position_code}, route=${routeName}`,
+      "info"
+    );
+    // 1. 결재라인 전체 조회 (로그)
+    const allLines = await dbAll(
+      `SELECT * FROM approval_lines
+         WHERE doc_type = ?
+           AND department_code = ?
+           AND team_code = ?
+           AND route_name = ?
+         ORDER BY step ASC`,
+      [targetType, applicant.department_code, applicant.team_code, routeName]
+    );
+    logSystemAction(
+      req,
+      applicant,
+      LOG_ACTIONS.READ,
+      `[결재선생성] 불러온 결재라인 전체 개수: ${allLines.length}`,
+      "info"
+    );
+
+    // 2. 신청자 직급 조건으로 필터링 (condition_expression)
+    const filteredLines = allLines.filter((line) => {
+      if (!line.condition_expression) return true;
+      const expr = line.condition_expression.trim();
+      // IN 조건
+      if (expr.startsWith("applicant_role IN")) {
+        const matches = expr.match(/\((.*?)\)/);
+        if (matches) {
+          const roles = matches[1]
+            .replace(/'/g, "")
+            .split(",")
+            .map((x) => x.trim());
+          return roles.includes(applicant.position_code);
+        }
+      }
+      // = 조건
+      else if (expr.startsWith("applicant_role=")) {
+        const role = expr.split("=")[1].replace(/'/g, "").trim();
+        return applicant.position_code === role;
+      }
+      return false;
+    });
+    logSystemAction(
+      req,
+      applicant,
+      LOG_ACTIONS.READ,
+      `[결재선생성] 신청자 직급(${applicant.position_code})에 맞는 결재라인 개수: ${filteredLines.length}`,
+      "info"
+    );
+
+    if (!filteredLines.length) {
+      logSystemAction(
+        req,
+        applicant,
+        LOG_ACTIONS.CREATE_FAIL,
+        `[결재선생성] 조건에 맞는 결재선 없음 (position_code=${applicant.position_code})`,
+        "error"
+      );
+      throw new Error("결재선 미설정(직급 조건 불일치)");
+    }
+
+    // approvalId, approverId, step 정보를 담을 배열
+    const createdApprovers = [];
+
+    for (let i = 0; i < filteredLines.length; i++) {
+      const line = filteredLines[i];
+      let approverId = null;
+
+      // SKIP 라인은 건너뜀(로그)
+      if (line.proxy_type === "SKIP") {
+        logSystemAction(
+          req,
+          applicant,
+          LOG_ACTIONS.CREATE,
+          `[결재선생성] step ${line.step}: SKIP(대각선), approvals 미생성`,
+          "info"
+        );
+        continue;
+      }
+
+      // ORIGINAL(본인결재)
+      if (applicant.position_code === line.role_code) {
+        approverId = applicant.id;
+      }
+      // PROXY(전결)
+      else if (line.proxy_type === "PROXY") {
+        const proxyUser = await dbGet(
+          `SELECT id FROM users WHERE department_code = ? AND position_code = ? AND status='ACTIVE' LIMIT 1`,
+          [applicant.department_code, line.proxy_role]
+        );
+        approverId = proxyUser?.id;
+      }
+      // 일반 결재자(역할기반)
+      else {
+        const user = await dbGet(
+          `SELECT id FROM users WHERE department_code = ? AND position_code = ? AND status='ACTIVE' LIMIT 1`,
+          [applicant.department_code, line.role_code]
+        );
+        approverId = user?.id;
+      }
+
+      // 결재자 없는 경우
+      if (!approverId) {
+        if (line.is_required) {
+          logSystemAction(
+            req,
+            applicant,
+            LOG_ACTIONS.CREATE_FAIL,
+            `[결재선생성] step ${line.step}: 필수 결재자 없음 (role_code=${line.role_code})`,
+            "error"
+          );
+          throw new Error(`[결재선생성] step ${line.step} 필수 결재자 없음`);
+        } else {
+          logSystemAction(
+            req,
+            applicant,
+            LOG_ACTIONS.CREATE,
+            `[결재선생성] step ${line.step}: 옵션 결재자 없음, SKIP`,
+            "warn"
+          );
+          continue;
+        }
+      }
+
+      // approvals row 생성
+      try {
+        const result = await dbRun(
+          `INSERT INTO approvals (
+            target_type, target_id, requester_id, approver_id, step,
+            status, is_final, created_at,
+            proxy_type, proxy_role
+          ) VALUES (?, ?, ?, ?, ?, 'PENDING', ?, datetime('now'), ?, ?)`,
+          [
+            targetType,
+            targetId,
+            applicant.id,
+            approverId,
+            line.step,
+            i === filteredLines.length - 1 ? 1 : 0,
+            line.proxy_type,
+            line.proxy_role,
+          ]
+        );
+        createdApprovers.push({
+          approvalId: result.lastID,
+          approverId,
+          step: line.step,
+        });
+        logSystemAction(
+          req,
+          applicant,
+          LOG_ACTIONS.CREATE,
+          `[결재선생성] step ${line.step} approvals 생성: approvalId=${result.lastID}, approverId=${approverId}`,
+          "info"
+        );
+      } catch (insertErr) {
+        logSystemAction(
+          req,
+          applicant,
+          LOG_ACTIONS.CREATE_FAIL,
+          `[결재선생성] step ${line.step}: approvals INSERT 실패 - ${insertErr.message}`,
+          "error"
+        );
+        throw insertErr;
+      }
+    }
+
+    logSystemAction(
+      req,
+      applicant,
+      LOG_ACTIONS.CREATE,
+      `[결재선생성] approvals 총 생성 개수: ${createdApprovers.length}`,
+      "info"
+    );
+    return createdApprovers;
+  } catch (err) {
+    logSystemAction(
+      req,
+      applicant,
+      LOG_ACTIONS.CREATE_FAIL,
+      `[결재선생성] 전체 실패: ${err.message}`,
+      "error"
+    );
+    throw err;
+  }
+};
+
+/**
+ * 결재라인별 결재자 자동 Fallback 포함 (user_id→직급→상위직급)
+ * @route GET /api/approval-lines
+ * @desc 결재선 조회 - approval_lines 기준 + 후보자(users) Fallback 포함
+ * @returns {Array} 각 결재라인 + candidates
+ */
+exports.getApprovalLines = async (req, res) => {
+  const { doc_type, department_code, team_code, route_name } = req.query;
+  console.log("[GET /api/approval-lines] params:", {
+    doc_type,
+    department_code,
+    team_code,
+    route_name,
+  });
+
+  try {
+    // 1. 결재라인 SELECT (role_label, proxy_type 포함)
+    const approvalLines = await dbAll(
+      `
+      SELECT al.*, cc.label AS role_label
+      FROM approval_lines al
+      LEFT JOIN common_codes cc
+        ON cc.code_group = 'POSITION' AND cc.code = al.role_code
+      WHERE al.doc_type = ?
+        AND al.department_code = ?
+        AND al.team_code = ?
+        AND al.route_name = ?
+      ORDER BY al.step ASC
+      `,
+      [doc_type, department_code, team_code, route_name]
+    );
+
+    // 2. 각 결재라인별로 후보자(users) SELECT해서 붙이기
+    const result = [];
+    for (const line of approvalLines) {
+      let candidates = [];
+
+      // 1) user_id 직접 지정(우선순위)
+      if (line.user_id) {
+        const user = await dbGet(
+          `SELECT u.id, u.name, u.position_code, cc.label AS position_label
+         FROM users u
+         LEFT JOIN common_codes cc ON cc.code_group = 'POSITION' AND cc.code = u.position_code
+         WHERE u.id = ? AND u.status = 'ACTIVE'`,
+          [line.user_id]
+        );
+        if (user) candidates = [user];
+      }
+      // 2) 같은 직급 후보
+      if (candidates.length === 0 && line.role_code) {
+        candidates = await dbAll(
+          `SELECT u.id, u.name, u.position_code, cc.label AS position_label
+           FROM users u
+           LEFT JOIN common_codes cc ON cc.code_group = 'POSITION' AND cc.code = u.position_code
+           WHERE u.department_code = ? AND u.team_code = ? AND u.position_code = ? AND u.status = 'ACTIVE'`,
+          [department_code, line.team_code, line.role_code]
+        );
+      }
+
+      // 3) team_code 조건 없이 후보 (부장 등)
+      if (candidates.length === 0 && line.role_code) {
+        candidates = await dbAll(
+          `SELECT u.id, u.name, u.position_code, cc.label AS position_label
+                 FROM users u
+                 LEFT JOIN common_codes cc ON cc.code_group = 'POSITION' AND cc.code = u.position_code
+                 WHERE u.department_code = ? AND u.position_code = ? AND u.status = 'ACTIVE'`,
+          [department_code, line.role_code]
+        );
+      }
+      result.push({
+        id: line.id,
+        step: line.step,
+        role_code: line.role_code,
+        role_label: line.role_label || "",
+        proxy_type: line.proxy_type,
+        proxy_role: line.proxy_role,
+        note: line.note,
+        candidates, // [{id, name, position_code, position_label}, ...]
+      });
+    }
+
+    console.log("[GET /api/approval-lines] result:", result);
+    res.json({ approvalLines: result });
+  } catch (error) {
+    console.error("approvalLines 조회 실패:", error);
+    res.status(500).json({ error: "결재선 조회 실패" });
   }
 };

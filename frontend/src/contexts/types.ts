@@ -10,6 +10,7 @@ export type UserContextType = {
   role: RoleType;
   department_code: string;
   position_code: string;
+  team_code: string;
   login: (data: {
     id: number;
     username: string;
@@ -20,6 +21,7 @@ export type UserContextType = {
     employee_number: string;
     department_code?: string;
     position_code?: string;
+    team_code: string;
   }) => void;
   logout: () => void;
   updateToken: (newToken: string) => void;

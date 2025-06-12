@@ -96,6 +96,7 @@ export default function UnifiedApprovalDetailInlineView({
         <UnifiedApprovalDetailContent
           targetType={targetType}
           data={detail.data}
+          targetId={targetId}
           commonCodeMap={commonCodeMap}
         />
       </ApprovalDetailLayout>

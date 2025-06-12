@@ -25,6 +25,7 @@ const login = (req, res) => {
 
   try {
     findUserByUsername(username, async (err, user) => {
+      console.log("🟦 [login] findUserByUsername 리턴 user:", user);
       if (err) {
         handleDbError(res, "로그인 - 사용자 조회", err);
         logSystemAction(
@@ -122,6 +123,11 @@ const login = (req, res) => {
             username: user.username,
             name: user.name,
             role: user.role,
+            department_code: user.department_code,
+            team_code: user.team_code,
+            position_code: user.position_code,
+            employee_number: user.employee_number,
+            email: user.email,
           },
         });
       });

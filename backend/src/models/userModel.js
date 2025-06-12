@@ -6,7 +6,13 @@ const { LOG_ACTIONS } = require("../utils/logActions");
  * 사용자 이름으로 사용자 조회
  */
 const findUserByUsername = (username, callback) => {
-  const query = `SELECT * FROM users WHERE username = ?`;
+  const query = `
+  SELECT
+    id, username, password, name, email, role, employee_number,
+    department_code, team_code, position_code, status
+  FROM users
+  WHERE username = ?
+`;
   dbGet(query, [username])
     .then((row) => {
       if (!row) {

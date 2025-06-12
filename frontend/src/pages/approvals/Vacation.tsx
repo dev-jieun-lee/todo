@@ -4,14 +4,15 @@ import MyVacationList from "../Calendar/MyVacationList";
 import LeaveSummaryCard from "../profile/LeaveSummaryCard";
 import api from "../../utils/axiosInstance";
 import { toast } from "react-toastify";
-import useCommonCodeMap from "../../hooks/useCommonCodeMap";
+import { useCommonCodeMap } from "../../contexts/CommonCodeContext";
 import type { VacationDetail } from "../../types/types";
-
+import { useUser } from "../../contexts/useUser";
 const Vacation = () => {
   const [refreshFlag, setRefreshFlag] = useState(false);
   const [vacations, setVacations] = useState<VacationDetail[]>([]);
 
-  const { commonCodeMap } = useCommonCodeMap(["VACATION_TYPE", "POSITION"]);
+  const commonCodeMap = useCommonCodeMap();
+  const user = useUser(); // 사용자 정보 받아오기
 
   const handleSubmitted = () => {
     setRefreshFlag((prev) => !prev);
@@ -26,7 +27,7 @@ const Vacation = () => {
         toast.error("휴가 목록을 불러오지 못했습니다.");
       });
   }, [refreshFlag]);
-
+  console.log("VacationForm user:", user);
   return (
     <div className="p-6">
       <h2 className="text-2xl font-bold mb-2">🌴 연차 / 병가 신청 및 현황</h2>
@@ -46,6 +47,11 @@ const Vacation = () => {
             className="h-full"
             vacations={vacations}
             commonCodeMap={commonCodeMap}
+            user={{
+              id: user?.id ?? 0,
+              department_code: user?.department_code ?? "",
+              team_code: user?.team_code ?? "",
+            }}
           />
         </div>
 

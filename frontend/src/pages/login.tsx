@@ -18,12 +18,8 @@ const Login = () => {
       const { token, user } = res.data; // 🔑 서버에서 token과 user 정보 반환
       //로그인 정보 저장 + 메모리 토큰 등록
       login({
-        id: user.id,
-        token,
-        email: user.email,
-        username: user.username,
-        name: user.name,
-        role: user.role,
+        ...user,
+        token, // token은 별도로 추가
       });
       navigate("/");
     } catch (err) {
@@ -55,12 +51,8 @@ const Login = () => {
       const { token, user } = res.data;
 
       login({
-        id: user.id,
-        token,
-        email: user.email,
-        username: user.username,
-        name: user.name,
-        role: user.role,
+        ...user,
+        token, // token은 별도로 추가
       });
       navigate("/");
     } catch (err) {

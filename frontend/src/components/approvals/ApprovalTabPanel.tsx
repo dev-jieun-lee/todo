@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import api from "../../utils/axiosInstance";
 import { toast } from "react-toastify";
 import type { ApprovalItem, ApprovalListItem } from "../../types/approval";
-import useCommonCodeMap from "../../hooks/useCommonCodeMap";
+import { useCommonCodeMap } from "../../contexts/CommonCodeContext";
 // import { useUser } from "../../contexts/useUser";
 
 interface ApprovalTabPanelProps {
@@ -31,10 +31,7 @@ export default function ApprovalTabPanel({
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [items, setItems] = useState<ApprovalListItem[]>([]);
   const [searchText, setSearchText] = useState("");
-  const { commonCodeMap } = useCommonCodeMap([
-    "APPROVAL_TARGET",
-    "APPROVAL_STATUS",
-  ]);
+  const commonCodeMap = useCommonCodeMap();
   // const { id } = useUser();
 
   useEffect(() => {

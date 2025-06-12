@@ -1,6 +1,7 @@
 import "./VacationDetailView.css";
 import type { VacationDetailData } from "../../../types/approval";
 import { useDateUtils } from "../../../hooks/useDateUtils";
+import { roleLabelMap } from "../../../types/approvalRoles";
 
 export interface VacationDetailViewProps {
   data: VacationDetailData;
@@ -27,94 +28,66 @@ export default function VacationDetailView({
 
   const vacationTypeList = (commonCodeMap["VACATION_TYPE"] || []).slice(0, 7);
 
-  // 결재자 칸 렌더링: 이름, 승인일시, 승인마크 ✔️
-  // function renderApproverCell(role: string) {
-  //   // approvers: {manager, partLead, teamLead, deptHead, ceo}
-  //   const approver = approvers?.[role];
-  //   if (!approver) return "";
-
-  //   if (
-  //     typeof approver === "object" &&
-  //     approver !== null &&
-  //     "name" in approver
-  //   ) {
-  //     return (
-  //       <div style={{ minHeight: 36, minWidth: 70 }}>
-  //         <span>{approver.name}</span>
-  //         {approver.status === "APPROVED" && (
-  //           <span
-  //             style={{ display: "block", fontSize: "11px", color: "#16a34a" }}
-  //           >
-  //             {approver.approvedAt
-  //               ? approver.approvedAt.slice(0, 16).replace("T", " ")
-  //               : ""}
-  //             <span style={{ marginLeft: 3, color: "#16a34a" }}>✔</span>
-  //           </span>
-  //         )}
-  //         {approver.status === "REJECTED" && (
-  //           <span
-  //             style={{ display: "block", fontSize: "11px", color: "#ef4444" }}
-  //           >
-  //             반려
-  //           </span>
-  //         )}
-  //       </div>
-  //     );
-  //   }
-  //   return approver;
-  // }
-
+  //결재자 한 칸 렌더링: 전결/대각선/본인/일반 결재/상태
   function renderApproverCell(role: string) {
     const approver = approvers?.[role];
     if (!approver) return "";
 
-    // object 구조
-    if (
-      typeof approver === "object" &&
-      approver !== null &&
-      "name" in approver
-    ) {
+    // 1. 대각선(SKIP)
+    if (approver.proxy_type === "SKIP")
+      return <span style={{ color: "#aaa" }}>—</span>;
+
+    // 2. 전결(PROXY)
+    if (approver.proxy_type === "PROXY")
       return (
-        <div style={{ minHeight: 36, minWidth: 70 }}>
-          <span>{approver.name}</span>
-          {approver.status === "APPROVED" && (
-            <span
-              style={{ display: "block", fontSize: "11px", color: "#16a34a" }}
-            >
-              승인완료
-              {approver.approvedAt && (
-                <span style={{ marginLeft: 6, color: "#666" }}>
-                  <br />
-                  {approver.approvedAt.slice(0, 16).replace("T", " ")}
-                </span>
-              )}
-              <span style={{ marginLeft: 4, color: "#16a34a" }}>✔</span>
-            </span>
-          )}
-          {approver.status === "REJECTED" && (
-            <span
-              style={{ display: "block", fontSize: "11px", color: "#ef4444" }}
-            >
-              반려
-              {approver.approvedAt && (
-                <span style={{ marginLeft: 6, color: "#666" }}>
-                  <br />
-                  {approver.approvedAt.slice(0, 16).replace("T", " ")}
-                </span>
-              )}
-              <span style={{ marginLeft: 4, color: "#ef4444" }}>✖</span>
-            </span>
-          )}
-          {approver.status === "PENDING" && (
-            <span style={{ display: "block", fontSize: "11px", color: "#aaa" }}>
-              대기
-            </span>
-          )}
-        </div>
+        <span style={{ color: "#0ea5e9", fontWeight: 500 }}>
+          전결
+          {approver.proxy_role && roleLabelMap[approver.proxy_role]
+            ? `(${roleLabelMap[approver.proxy_role]})`
+            : ""}
+        </span>
       );
-    }
-    // 문자열 구조(이전)
-    return <span>{approver}</span>;
+
+    // 3. 본인 결재(ORIGINAL) 혹은 미지정
+    return (
+      <div style={{ minHeight: 36, minWidth: 70 }}>
+        <span>{approver.name}</span>
+        {approver.status === "APPROVED" && (
+          <span style={{ display: "block", fontSize: 11, color: "#16a34a" }}>
+            승인완료
+            {approver.approvedAt && (
+              <span style={{ marginLeft: 6, color: "#666" }}>
+                <br />
+                {approver.approvedAt.slice(0, 16).replace("T", " ")}
+              </span>
+            )}
+            <span style={{ marginLeft: 4, color: "#16a34a" }}>✔</span>
+          </span>
+        )}
+        {approver.status === "REJECTED" && (
+          <span style={{ display: "block", fontSize: 11, color: "#ef4444" }}>
+            반려
+            {approver.approvedAt && (
+              <span style={{ marginLeft: 6, color: "#666" }}>
+                <br />
+                {approver.approvedAt.slice(0, 16).replace("T", " ")}
+              </span>
+            )}
+            <span style={{ marginLeft: 4, color: "#ef4444" }}>✖</span>
+          </span>
+        )}
+        {approver.status === "PENDING" && (
+          <span style={{ display: "block", fontSize: 11, color: "#aaa" }}>
+            대기
+          </span>
+        )}
+        {approver.status === "SKIPPED" && (
+          <span style={{ display: "block", fontSize: 11, color: "#aaa" }}>
+            —
+          </span>
+        )}
+      </div>
+    );
   }
 
   return (

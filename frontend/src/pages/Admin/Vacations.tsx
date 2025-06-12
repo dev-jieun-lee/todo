@@ -2,49 +2,24 @@ import { useEffect, useState } from "react";
 import api from "../../utils/axiosInstance";
 // import { toast } from "react-toastify";
 import { handleApiError } from "../../utils/handleErrorFront";
-import useCommonCodeMap from "../../hooks/useCommonCodeMap";
+import { useCommonCodeMap } from "../../contexts/CommonCodeContext";
 import type { ApprovalVacation } from "../../types/types";
 
 const Vacations = () => {
   const [vacations, setVacations] = useState<ApprovalVacation[]>([]);
-  const { commonCodeMap } = useCommonCodeMap([
-    "VACATION_TYPE",
-    "APPROVAL_STATUS",
-    "POSITION",
-    "DEPARTMENT",
-    "DURATION_UNIT",
-  ]);
+
+  const commonCodeMap = useCommonCodeMap();
 
   const fetchVacations = async () => {
     try {
       const res = await api.get<ApprovalVacation[]>("/approvals/pending", {
-        params: { target_type: "vacation" },
+        params: { target_type: "VACATION" },
       });
       setVacations(res.data);
     } catch (err) {
       handleApiError(err, "휴가 요청 목록 불러오기 실패");
     }
   };
-
-  // const handleApprove = async (id: number) => {
-  //   try {
-  //     await api.post(`/approvals/vacation/${id}/approve`);
-  //     toast.success("승인 완료");
-  //     fetchVacations();
-  //   } catch (err) {
-  //     handleApiError(err, "휴가 승인 처리 중 오류 발생");
-  //   }
-  // };
-
-  // const handleReject = async (id: number) => {
-  //   try {
-  //     await api.post(`/approvals/vacation/${id}/reject`, { memo: "반려 사유" });
-  //     toast.success("반려 완료");
-  //     fetchVacations();
-  //   } catch (err) {
-  //     handleApiError(err, "휴가 반려 처리 중 오류 발생");
-  //   }
-  // };
 
   useEffect(() => {
     fetchVacations();
@@ -105,27 +80,7 @@ const Vacations = () => {
                     )} / ${getLabel("DEPARTMENT", v.approver_dept)})`
                   : "-"}
               </td>
-              <td className="p-2">
-                {/* {v.status === "PENDING" ? (
-                  <div className="space-x-2">
-                    <button
-                      onClick={() => handleApprove(v.target_id)}
-                      className="text-green-600 hover:underline"
-                    >
-                      승인
-                    </button>
-                    <button
-                      onClick={() => handleReject(v.target_id)}
-                      className="text-red-600 hover:underline"
-                    >
-                      반려
-                    </button>
-                  </div>
-                ) : (
-                  "-"
-                )} */}
-                {"-"}
-              </td>
+              <td className="p-2">{"-"}</td>
             </tr>
           ))}
         </tbody>
