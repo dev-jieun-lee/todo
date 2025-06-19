@@ -85,3 +85,89 @@ exports.getApprovers = async (req, res) => {
     return res.status(500).json({ error: "결재자 조회 실패" });
   }
 };
+
+/**
+ * 팀원 정보 조회
+ * @route GET /api/user/team-members
+ * @desc 현재 사용자의 팀에 속한 모든 팀원 정보를 조회
+ */
+exports.getTeamMembers = async (req, res) => {
+  const userId = req.user?.id;
+  const { team_code } = req.query;
+
+  if (!userId) {
+    logSystemAction(
+      req,
+      req.user,
+      LOG_ACTIONS.ERROR,
+      "사용자 ID 없음",
+      "error"
+    );
+    return res.status(400).json({ error: "사용자 정보가 없습니다." });
+  }
+
+  try {
+    // 사용자 팀 정보 확인
+    const userRow = await dbGet(
+      `SELECT team_code, department_code FROM users WHERE id = ?`,
+      [userId]
+    );
+    
+    if (!userRow) {
+      logSystemAction(
+        req,
+        req.user,
+        LOG_ACTIONS.ERROR,
+        "사용자 정보 없음",
+        "error"
+      );
+      return res.status(500).json({ error: "사용자 정보 없음" });
+    }
+
+    const targetTeamCode = team_code || userRow.team_code;
+
+    // 팀원 정보 조회
+    const sql = `
+      SELECT 
+        u.id,
+        u.name,
+        u.position_code,
+        u.team_code,
+        u.department_code,
+        cc.label AS position_label
+      FROM users u
+      LEFT JOIN common_codes cc ON cc.code_group = 'POSITION' AND cc.code = u.position_code
+      WHERE u.status = 'ACTIVE'
+        AND u.team_code = ?
+      ORDER BY 
+        CASE u.position_code
+          WHEN 'LEAD' THEN 1
+          WHEN 'MGR' THEN 2
+          WHEN 'STAFF' THEN 3
+          ELSE 4
+        END,
+        u.name
+    `;
+
+    const teamMembers = await dbAll(sql, [targetTeamCode]);
+
+    logSystemAction(
+      req,
+      req.user,
+      LOG_ACTIONS.READ,
+      `팀원 정보 조회: ${teamMembers.length}명 (팀: ${targetTeamCode})`,
+      "info"
+    );
+
+    res.json(teamMembers);
+  } catch (err) {
+    logSystemAction(
+      req,
+      req.user,
+      LOG_ACTIONS.ERROR,
+      `팀원 조회 실패: ${err.message}`,
+      "error"
+    );
+    return res.status(500).json({ error: "팀원 조회 실패" });
+  }
+};
