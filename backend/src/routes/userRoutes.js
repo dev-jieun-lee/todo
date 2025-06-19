@@ -4,5 +4,6 @@ const userController = require("../controllers/userController");
 const authenticateToken = require("../middlewares/authMiddleware");
 
 router.get("/approvers", authenticateToken, userController.getApprovers);
+router.get("/team-members", authenticateToken, userController.getTeamMembers);
 
 module.exports = router;

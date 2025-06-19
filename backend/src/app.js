@@ -27,6 +27,7 @@ const vacationRoutes = require("./routes/vacationRoutes");
 const commonCodeRoutes = require("./routes/commonCodeRoutes");
 const approvalRoutes = require("./routes/approvalRoutes");
 const userRoutes = require("./routes/userRoutes");
+const holidayRoutes = require("./routes/holidayRoutes");
 
 // 실제 API 라우팅 등록
 app.use("/api/todos", todoRoutes); // /api/todos/*
@@ -40,6 +41,7 @@ app.use("/api/vacations", vacationRoutes);
 app.use("/api/common-codes", commonCodeRoutes);
 app.use("/api/approvals", approvalRoutes);
 app.use("/api/user", userRoutes);
+app.use("/api/holidays", holidayRoutes); // /api/holidays/*
 
 //공통 에러 핸들링
 app.use((err, req, res, next) => {
