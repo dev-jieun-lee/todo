@@ -34,6 +34,106 @@ exports.getMyVacations = async (req, res) => {
   }
 };
 
+/**
+ * 팀 휴가 목록 조회
+ * @route GET /api/vacations/team
+ * @desc 현재 사용자의 팀에 속한 모든 팀원의 휴가 정보를 조회
+ */
+exports.getTeamVacations = async (req, res) => {
+  const userId = req.user?.id;
+  const { team_code, start_date, end_date } = req.query;
+
+  if (!userId) {
+    logSystemAction(
+      req,
+      req.user,
+      LOG_ACTIONS.ERROR,
+      "사용자 ID 없음",
+      "error"
+    );
+    return res.status(400).json({ error: "사용자 정보가 없습니다." });
+  }
+
+  try {
+    // 사용자 팀 정보 확인
+    const userRow = await dbGet(
+      `SELECT team_code FROM users WHERE id = ?`,
+      [userId]
+    );
+    
+    if (!userRow) {
+      logSystemAction(
+        req,
+        req.user,
+        LOG_ACTIONS.ERROR,
+        "사용자 정보 없음",
+        "error"
+      );
+      return res.status(500).json({ error: "사용자 정보 없음" });
+    }
+
+    const targetTeamCode = team_code || userRow.team_code;
+
+    // 팀 휴가 정보 조회
+    let sql = `
+      SELECT 
+        v.id,
+        v.user_id,
+        u.name AS user_name,
+        v.type_code,
+        cc.label AS type_label,
+        v.start_date,
+        v.end_date,
+        v.start_time,
+        v.end_time,
+        v.duration_unit,
+        v.status,
+        v.reason,
+        v.created_at
+      FROM vacations v
+      JOIN users u ON v.user_id = u.id
+      LEFT JOIN common_codes cc ON cc.code_group = 'VACATION_TYPE' AND cc.code = v.type_code
+      WHERE u.team_code = ?
+        AND u.status = 'ACTIVE'
+    `;
+
+    const params = [targetTeamCode];
+
+    // 날짜 필터 추가
+    if (start_date && end_date) {
+      sql += ` AND (
+        (v.start_date BETWEEN ? AND ?) OR 
+        (v.end_date BETWEEN ? AND ?) OR
+        (v.start_date <= ? AND v.end_date >= ?)
+      )`;
+      params.push(start_date, end_date, start_date, end_date, start_date, end_date);
+    }
+
+    sql += ` ORDER BY v.start_date ASC, u.name ASC`;
+
+    const teamVacations = await dbAll(sql, params);
+
+    logSystemAction(
+      req,
+      req.user,
+      LOG_ACTIONS.READ,
+      `팀 휴가 정보 조회: ${teamVacations.length}건 (팀: ${targetTeamCode})`,
+      "info"
+    );
+
+    res.json(teamVacations);
+  } catch (err) {
+    logSystemAction(
+      req,
+      req.user,
+      LOG_ACTIONS.READ_FAIL,
+      `팀 휴가 조회 실패: ${err.message}`,
+      "error"
+    );
+    return res.status(500).json({ error: "팀 휴가 조회 실패" });
+  }
+};
+
 // 2. 휴가 신청
 // 사용자가 휴가를 신청하며, 승인자와 이력도 함께 등록
 exports.applyVacation = async (req, res) => {
