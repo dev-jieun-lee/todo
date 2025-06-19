@@ -1,9 +1,15 @@
 // 📅 공용 캘린더 > 팀 일정 보기
 import { useState, useEffect } from "react";
 import dayjs from "dayjs";
-import { ChevronLeft, ChevronRight, Calendar, Users, UserCheck, UserX } from "lucide-react";
+import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
+import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
+import { ChevronLeft, ChevronRight, Calendar, Users, UserCheck, UserX, X } from "lucide-react";
 import api from "../../utils/axiosInstance";
 import { useUser } from "../../contexts/useUser";
+import { useNavigate } from "react-router-dom";
+
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isSameOrBefore);
 
 interface TeamMember {
   id: number;
@@ -52,8 +58,9 @@ const Team = () => {
   const [vacations, setVacations] = useState<VacationEvent[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
   const user = useUser();
+  const [modalOpen, setModalOpen] = useState<null | 'working' | 'vacation'>(null);
+  const navigate = useNavigate();
 
   // 현재 월의 첫째 주와 마지막 주 계산
   const startOfMonth = currentDate.startOf('month');
@@ -175,10 +182,66 @@ const Team = () => {
     return date.isSame(dayjs(), 'day');
   };
 
-  // 팀원별 휴가 현황
-  const getMemberVacationStatus = (memberId: number) => {
-    const memberVacations = vacations.filter(v => v.user_id === memberId && v.status === 'APPROVED');
-    return memberVacations.length > 0 ? memberVacations[0] : null;
+  // 오늘 날짜
+  const today = dayjs();
+
+  // 오늘 휴가중인 팀원만 필터
+  const vacationMembers = teamMembers.filter(member => {
+    const vac = vacations.find(v => v.user_id === member.id && v.status === 'APPROVED');
+    if (!vac) return false;
+    // 오늘이 휴가 기간 내에 포함되는지 확인
+    return dayjs(today).isSameOrAfter(dayjs(vac.start_date), 'day') && dayjs(today).isSameOrBefore(dayjs(vac.end_date), 'day');
+  });
+  const workingMembers = teamMembers.filter(member => !vacationMembers.includes(member));
+
+  // ESC로 모달 닫기
+  useEffect(() => {
+    if (!modalOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setModalOpen(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [modalOpen]);
+
+  // 모달 내용
+  const renderModal = () => {
+    if (!modalOpen) return null;
+    const list = modalOpen === 'working' ? workingMembers : vacationMembers;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30 transition-opacity duration-200 animate-fadein">
+        <div className="bg-white rounded-lg shadow-lg p-6 min-w-[320px] relative transition-all duration-200 transform animate-modalpop">
+          <button className="absolute top-2 right-2 p-1 hover:bg-gray-100 rounded" onClick={() => setModalOpen(null)}>
+            <X size={18} />
+          </button>
+          <h3 className="text-lg font-semibold mb-4">
+            {modalOpen === 'working' ? '출근 중인 팀원' : '휴가 중인 팀원'}
+          </h3>
+          {list.length === 0 ? (
+            <div className="text-gray-500">팀원이 없습니다.</div>
+          ) : (
+            <ul className="space-y-2">
+              {list.map(member => (
+                <li key={member.id} className="flex items-center gap-2">
+                  <span
+                    className="font-medium cursor-pointer text-blue-700 hover:underline hover:text-blue-900 transition-colors"
+                    onClick={() => navigate(`/profile/${member.id}`)}
+                  >
+                    {member.name}
+                  </span>
+                  <span className="text-xs text-gray-500">{member.position_label}</span>
+                  {modalOpen === 'vacation' && (
+                    <span className="text-xs text-red-600 ml-2">
+                      {vacations.find(v => v.user_id === member.id && v.status === 'APPROVED')?.type_label}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -204,38 +267,9 @@ const Team = () => {
         <p className="text-gray-600">팀별 월간/주간 일정을 확인할 수 있습니다.</p>
       </div>
 
-      {/* 팀원 현황 */}
-      <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
-        <h3 className="font-semibold mb-3 flex items-center gap-2">
-          <Users size={20} />
-          팀원 현황 ({teamMembers.length}명)
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {teamMembers.map(member => {
-            const vacation = getMemberVacationStatus(member.id);
-            return (
-              <div key={member.id} className="flex items-center gap-3 p-3 border rounded-lg">
-                <div className={`p-2 rounded-full ${vacation ? 'bg-red-100' : 'bg-green-100'}`}>
-                  {vacation ? <UserX size={16} className="text-red-600" /> : <UserCheck size={16} className="text-green-600" />}
-                </div>
-                <div className="flex-1">
-                  <div className="font-medium">{member.name}</div>
-                  <div className="text-sm text-gray-500">{member.position_label}</div>
-                  {vacation && (
-                    <div className="text-xs text-red-600 mt-1">
-                      {vacation.type_label} ({dayjs(vacation.start_date).format('MM/DD')})
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 캘린더 헤더 */}
+      {/* 캘린더 헤더 + 통계 + 범례 */}
       <div className="bg-white rounded-lg shadow-sm border mb-6">
-        <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center justify-between p-4 border-b flex-wrap gap-4">
           <div className="flex items-center gap-4">
             <button
               onClick={goToPreviousMonth}
@@ -243,11 +277,9 @@ const Team = () => {
             >
               <ChevronLeft size={20} />
             </button>
-            
             <h3 className="text-xl font-semibold">
               {currentDate.format('YYYY년 MM월')}
             </h3>
-            
             <button
               onClick={goToNextMonth}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -255,24 +287,54 @@ const Team = () => {
               <ChevronRight size={20} />
             </button>
           </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={() => setViewMode('month')}
-              className={`px-3 py-1 rounded text-sm ${
-                viewMode === 'month' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
-              }`}
-            >
-              월간
-            </button>
-            <button
-              onClick={() => setViewMode('week')}
-              className={`px-3 py-1 rounded text-sm ${
-                viewMode === 'week' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
-              }`}
-            >
-              주간
-            </button>
+          {/* 통계 요약 + 범례 */}
+           <div className="flex gap-6 items-center flex-wrap">
+            <div className="flex gap-4 items-center">
+              <div className="flex items-center gap-2">
+                <Users className="text-blue-600" size={18} />
+                <span className="font-semibold text-blue-700">전체 팀원</span>
+                <span className="text-base font-bold text-blue-600">{teamMembers.length}명</span>
+              </div>
+              <button
+                className="flex items-center gap-2 hover:bg-green-50 px-2 py-1 rounded"
+                onClick={() => setModalOpen('working')}
+              >
+                <UserCheck className="text-green-600" size={18} />
+                <span className="font-semibold text-green-700">출근 중</span>
+                <span className="text-base font-bold text-green-600">{workingMembers.length}명</span>
+              </button>
+              <button
+                className="flex items-center gap-2 hover:bg-red-50 px-2 py-1 rounded"
+                onClick={() => setModalOpen('vacation')}
+              >
+                <UserX className="text-red-600" size={18} />
+                <span className="font-semibold text-red-700">휴가 중</span>
+                <span className="text-base font-bold text-red-600">{vacationMembers.length}명</span>
+              </button>
+            </div>
+            {/* 범례 */}
+            <div className="flex flex-wrap gap-4 ml-4">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-blue-100 rounded"></div>
+                <span className="text-sm">연차</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-red-100 rounded"></div>
+                <span className="text-sm">병가</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-yellow-100 rounded"></div>
+                <span className="text-sm">반차</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-pink-100 rounded"></div>
+                <span className="text-sm">출산휴가</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-red-100 rounded"></div>
+                <span className="text-sm">공휴일</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -290,20 +352,19 @@ const Team = () => {
           {calendarDays.map((date, index) => {
             const dayEvents = getEventsForDate(date);
             const isCurrentMonth = date.month() === currentDate.month();
-            
+            const today = isToday(date);
             return (
               <div
                 key={index}
                 className={`min-h-[120px] p-2 border-r border-b ${
                   isCurrentMonth ? 'bg-white' : 'bg-gray-50'
-                } ${isToday(date) ? 'bg-blue-50' : ''}`}
+                } ${today ? 'bg-blue-200 border-blue-400' : ''}`}
               >
                 <div className={`text-sm font-medium mb-1 ${
                   isCurrentMonth ? 'text-gray-900' : 'text-gray-400'
-                } ${isToday(date) ? 'text-blue-600' : ''}`}>
+                } ${today ? 'text-blue-900' : ''}`}>
                   {date.date()}
                 </div>
-                
                 {/* 이벤트 표시 */}
                 <div className="space-y-1">
                   {dayEvents.slice(0, 3).map(event => (
@@ -334,67 +395,42 @@ const Team = () => {
         </div>
       </div>
 
-      {/* 범례 */}
-      <div className="bg-white rounded-lg shadow-sm border p-4">
-        <h4 className="font-semibold mb-3">범례</h4>
-        <div className="flex flex-wrap gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-blue-100 rounded"></div>
-            <span className="text-sm">연차</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-red-100 rounded"></div>
-            <span className="text-sm">병가</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-yellow-100 rounded"></div>
-            <span className="text-sm">반차</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-pink-100 rounded"></div>
-            <span className="text-sm">출산휴가</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-red-100 rounded"></div>
-            <span className="text-sm">공휴일</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 통계 요약 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-        <div className="bg-white rounded-lg shadow-sm border p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Users className="text-blue-600" size={20} />
-            <h4 className="font-semibold">전체 팀원</h4>
-          </div>
-          <div className="text-2xl font-bold text-blue-600">
-            {teamMembers.length}명
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow-sm border p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <UserCheck className="text-green-600" size={20} />
-            <h4 className="font-semibold">출근 중</h4>
-          </div>
-          <div className="text-2xl font-bold text-green-600">
-            {teamMembers.filter(member => !getMemberVacationStatus(member.id)).length}명
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow-sm border p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <UserX className="text-red-600" size={20} />
-            <h4 className="font-semibold">휴가 중</h4>
-          </div>
-          <div className="text-2xl font-bold text-red-600">
-            {teamMembers.filter(member => getMemberVacationStatus(member.id)).length}명
-          </div>
-        </div>
-      </div>
+      {/* 출근/휴가 모달 */}
+      {renderModal()}
     </div>
   );
 };
 
+/* Tailwind에 없는 애니메이션을 위한 스타일 추가 */
+// 아래 코드를 파일 맨 아래에 추가
+
+/* eslint-disable */
+import React from 'react';
+
+// 파일 맨 아래에 추가
+const style = `
+@keyframes fadein {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modalpop {
+  0% { opacity: 0; transform: scale(0.95) translateY(20px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.animate-fadein {
+  animation: fadein 0.2s ease;
+}
+.animate-modalpop {
+  animation: modalpop 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+`;
+
 export default Team;
+
+// 스타일 인젝션
+if (typeof window !== 'undefined' && !document.getElementById('team-modal-anim')) {
+  const styleTag = document.createElement('style');
+  styleTag.id = 'team-modal-anim';
+  styleTag.innerHTML = style;
+  document.head.appendChild(styleTag);
+}
