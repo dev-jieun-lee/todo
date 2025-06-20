@@ -1,4 +1,6 @@
 // 📅 공용 캘린더 > KPI / TODO 마감일 연동
+// 이 컴포넌트는 KPI 및 To-do 마감 일정을 캘린더에 표시하는 용도입니다.
+// KPI 데이터는 임시(mock) 데이터, To-do는 서비스에서 불러옴
 import { useState, useEffect } from "react";
 import dayjs from "dayjs";
 import { ChevronLeft, ChevronRight, Calendar, Target, CheckSquare } from "lucide-react";
