@@ -10,7 +10,10 @@ exports.insertApprovalStep = (data, callback) => {
     step,
     order_no = 1,
     is_final = 0,
+    total_steps = 1
   } = data;
+
+  const isFinalValue = (step === total_steps) ? 1 : is_final;
 
   const sql = `
     INSERT INTO approvals (
@@ -27,7 +30,7 @@ exports.insertApprovalStep = (data, callback) => {
       approver_id,
       step,
       order_no,
-      is_final,
+      isFinalValue,
     ],
     callback
   );

@@ -203,62 +203,52 @@ exports.approve = async (req, res) => {
       "info"
     );
 
-    // 5단계: 최종 승인자일 경우 → vacation 등 target status 업데이트 + 이력 기록
-    if (row.is_final === 1 && targetType.toLowerCase() === "vacation") {
-      const vacationRow = await dbGet(
-        `SELECT status, user_id FROM vacations WHERE id = ?`,
-        [targetId]
+    // 모든 결재가 완료되었는지 확인 (APPROVED 외 상태가 있는지 체크)
+    if (targetType.toLowerCase() === "vacation") {
+      const pendingCountRow = await dbGet(
+        `SELECT COUNT(*) as cnt FROM approvals WHERE UPPER(target_type) = UPPER(?) AND target_id = ? AND status != 'APPROVED'`,
+        [targetType, targetId]
       );
+      if (pendingCountRow && pendingCountRow.cnt === 0) {
+        // 모든 결재가 완료된 경우 vacation 상태 변경 및 이력 추가
+        const vacationRow = await dbGet(
+          `SELECT status, user_id FROM vacations WHERE id = ?`,
+          [targetId]
+        );
+        if (vacationRow) {
+          const vacationUpdateSql = `
+            UPDATE vacations
+            SET status = 'APPROVED', approved_by = ?, approved_at = datetime('now')
+            WHERE id = ?
+          `;
+          await dbRun(vacationUpdateSql, [userId, targetId]);
+          logSystemAction(
+            req,
+            req.user,
+            LOG_ACTIONS.APPROVE,
+            `[모든 결재 완료] SQL 실행: ${vacationUpdateSql}, param=[${userId}, ${targetId}]`,
+            "info"
+          );
 
-      if (vacationRow) {
-        const vacationUpdateSql = `
-          UPDATE vacations
-          SET status = 'APPROVED', approved_by = ?, approved_at = datetime('now')
-          WHERE id = ?
-        `;
-        await dbRun(vacationUpdateSql, [userId, targetId]);
-        logSystemAction(
-          req,
-          req.user,
-          LOG_ACTIONS.APPROVE,
-          `SQL 실행: ${vacationUpdateSql}, param=[${userId}, ${targetId}]`,
-          "info"
-        );
-
-        const vacationHistorySql = `
-          INSERT INTO vacation_history (
-            vacation_id, user_id, action, old_value, new_value, memo, admin_id
-          ) VALUES (?, ?, 'APPROVE', ?, 'APPROVED', '최종 승인', ?)
-        `;
-        await dbRun(vacationHistorySql, [
-          targetId,
-          vacationRow.user_id,
-          vacationRow.status,
-          userId,
-        ]);
-        logSystemAction(
-          req,
-          req.user,
-          LOG_ACTIONS.APPROVE,
-          `SQL 실행: ${vacationHistorySql}, param=[${targetId}, ${vacationRow.user_id}, ${vacationRow.status}, ${userId}]`,
-          "info"
-        );
-
-        logSystemAction(
-          req,
-          req.user,
-          LOG_ACTIONS.APPROVE,
-          `최종 승인으로 휴가 상태 반영 완료 (vacationId: ${targetId})`,
-          "info"
-        );
-      } else {
-        logSystemAction(
-          req,
-          req.user,
-          LOG_ACTIONS.APPROVE_FAIL,
-          "휴가 정보 없음",
-          "error"
-        );
+          const vacationHistorySql = `
+            INSERT INTO vacation_history (
+              vacation_id, user_id, action, old_value, new_value, memo, admin_id
+            ) VALUES (?, ?, 'APPROVE', ?, 'APPROVED', '모든 결재 완료', ?)
+          `;
+          await dbRun(vacationHistorySql, [
+            targetId,
+            vacationRow.user_id,
+            vacationRow.status,
+            userId,
+          ]);
+          logSystemAction(
+            req,
+            req.user,
+            LOG_ACTIONS.APPROVE,
+            `[모든 결재 완료] SQL 실행: ${vacationHistorySql}, param=[${targetId}, ${vacationRow.user_id}, ${vacationRow.status}, ${userId}]`,
+            "info"
+          );
+        }
       }
     }
 

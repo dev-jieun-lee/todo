@@ -1,4 +1,6 @@
 // src/pages/calendar/MyVacationList.tsx
+// 📅 내 휴가 목록 페이지
+// 이 컴포넌트는 로그인 사용자의 휴가 신청 내역을 표로 보여주고, 취소 기능을 제공합니다.
 import { useEffect, useState } from "react";
 import api from "../../utils/axiosInstance";
 import { logEvent } from "../../utils/logger";
