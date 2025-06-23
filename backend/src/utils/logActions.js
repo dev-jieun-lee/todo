@@ -56,6 +56,11 @@ const LOG_ACTIONS = {
   BOARD_POST_EDIT: "BOARD_POST_EDIT",
   BOARD_POST_DELETE: "BOARD_POST_DELETE",
 
+  // 📎 첨부파일
+  FILE_UPLOAD: "FILE_UPLOAD",
+  FILE_DOWNLOAD: "FILE_DOWNLOAD",
+  FILE_DELETE: "FILE_DELETE",
+
   // 👤 내 정보
   PROFILE_VIEW: "PROFILE_VIEW",
 
@@ -145,6 +150,11 @@ const LOG_ACTION_LABELS = {
   BOARD_POST_CREATE: "게시글 작성",
   BOARD_POST_EDIT: "게시글 수정",
   BOARD_POST_DELETE: "게시글 삭제",
+
+  // 📎 첨부파일
+  FILE_UPLOAD: "첨부파일 업로드",
+  FILE_DOWNLOAD: "첨부파일 다운로드",
+  FILE_DELETE: "첨부파일 삭제",
 
   // 👤 내 정보
   PROFILE_VIEW: "내 정보 조회",

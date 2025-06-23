@@ -74,7 +74,6 @@ const Sidebar = ({
             ),
           }));
 
-        //  console.log("최종 메뉴:", visibleMenus);
         setFilteredMenuItems(visibleMenus);
       } catch (err) {
         console.error("❌ 메뉴 로딩 실패:", err);
@@ -95,7 +94,7 @@ const Sidebar = ({
 
     try {
       await api.post("/log/menu-access", { label, path });
-      if (location.pathname !== path) navigate(path);
+      navigate(path, { state: { timestamp: new Date().getTime() } });
       if (isMobile) setSidebarOpen(false);
     } catch (err) {
       console.warn("❗ 메뉴 접근 로그 실패:", err);

@@ -15,6 +15,18 @@ export function Card({
   );
 }
 
+export function CardHeader({
+  children,
+  className = "",
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={`pb-4 ${className}`} {...props}>
+      {children}
+    </div>
+  );
+}
+
 export function CardContent({
   children,
   className = "",
