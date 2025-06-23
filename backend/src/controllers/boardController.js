@@ -12,6 +12,7 @@
 const { dbGet, dbAll, dbRun } = require("../utils/dbHelpers");
 const { logSystemAction } = require("../utils/handleError");
 const { LOG_ACTIONS, LOG_ACTION_LABELS } = require("../utils/logActions");
+const { formatToKstString } = require("../utils/time");
 
 /**
  * 팀장 이상 권한 체크 함수
@@ -29,45 +30,63 @@ const hasManagerOrHigherPermission = (positionCode) => {
  * @desc 자유게시판의 게시글 목록을 최신순으로 조회 (페이지네이션 지원)
  */
 exports.getFreeBoardPosts = async (req, res) => {
-  const { page = 1, limit = 10, includeCommentCount } = req.query;
+  const { page = 1, limit = 20, includeCommentCount, title, author } = req.query;
   const offset = (page - 1) * limit;
-  
   try {
-    // 전체 게시글 수 조회
-    const countResult = await dbGet(
-      "SELECT COUNT(*) as total FROM boards WHERE type = 'FREE'",
-      []
+    // 공지사항 전체 조회 (항상 상단 고정)
+    const notices = await dbAll(
+      `SELECT b.*, u.name as author_name, u.department_code, u.position_code
+       FROM boards b
+       LEFT JOIN users u ON b.created_by = u.id
+       WHERE b.type = 'NOTICE'
+       ORDER BY b.created_at DESC`
     );
-    const total = countResult.total;
-    
-    // 댓글 수를 포함할지 여부에 따라 쿼리 변경
+
+    // 검색 조건 동적 생성
+    let whereClause = "b.type = 'FREE'";
+    const params = [];
+    if (title) {
+      whereClause += " AND b.title LIKE ?";
+      params.push(`%${title}%`);
+    }
+    if (author) {
+      whereClause += " AND IFNULL(u.name, '') LIKE ?";
+      params.push(`%${author}%`);
+    }
+
+    // 일반글(공지 제외) 페이징
     let postsQuery = `
       SELECT b.*, u.name as author_name, u.department_code, u.position_code
     `;
-
     if (includeCommentCount === 'true') {
       postsQuery += `, (SELECT COUNT(*) FROM board_comments WHERE board_id = b.id) as comment_count `;
     }
-
     postsQuery += `
       FROM boards b
       LEFT JOIN users u ON b.created_by = u.id
-      WHERE b.type = 'FREE'
+      WHERE ${whereClause}
       ORDER BY b.created_at DESC
       LIMIT ? OFFSET ?
     `;
+    const posts = await dbAll(postsQuery, [...params, limit, offset]);
 
-    const posts = await dbAll(postsQuery, [limit, offset]);
-    
+    // 전체 일반글 수 (검색 조건 반영)
+    const countResult = await dbGet(
+      `SELECT COUNT(*) as total FROM boards b LEFT JOIN users u ON b.created_by = u.id WHERE ${whereClause}`,
+      params
+    );
+    const total = countResult.total;
+
     logSystemAction(
       req,
       req.user,
       LOG_ACTIONS.READ,
-      `자유게시판 조회: ${posts.length}건 (페이지: ${page})`,
+      `자유게시판(공지+일반) 조회: 공지 ${notices.length}건, 일반 ${posts.length}건 (페이지: ${page})`,
       "info"
     );
-    
+
     res.json({
+      notices,
       posts,
       pagination: {
         current: parseInt(page),
@@ -82,7 +101,7 @@ exports.getFreeBoardPosts = async (req, res) => {
       req,
       req.user,
       LOG_ACTIONS.READ_FAIL,
-      `자유게시판 조회 실패: ${err.message}`,
+      `자유게시판(공지+일반) 조회 실패: ${err.message}`,
       "error"
     );
     res.status(500).json({ error: "게시글 목록 조회 실패" });
@@ -279,10 +298,10 @@ exports.createFreeBoardPost = async (req, res) => {
     
     // 게시글 타입 결정
     const postType = isNotice ? "NOTICE" : "FREE";
-    
+    const createdAtKst = formatToKstString();
     const result = await dbRun(
-      "INSERT INTO boards (type, title, content, created_by) VALUES (?, ?, ?, ?)",
-      [postType, title.trim(), content.trim(), userId]
+      "INSERT INTO boards (type, title, content, created_by, created_at) VALUES (?, ?, ?, ?, ?)",
+      [postType, title.trim(), content.trim(), userId, createdAtKst]
     );
     
     const newPost = {
@@ -291,7 +310,7 @@ exports.createFreeBoardPost = async (req, res) => {
       title: title.trim(),
       content: content.trim(),
       created_by: userId,
-      created_at: new Date().toISOString()
+      created_at: createdAtKst
     };
     
     logSystemAction(
