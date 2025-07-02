@@ -623,4 +623,351 @@ exports.createNoticeBoardPost = async (req, res) => {
     );
     res.status(500).json({ error: "공지사항 작성 실패" });
   }
+};
+
+// ===== 팀별 게시판 API =====
+
+/**
+ * 팀별 게시판 게시글 목록 조회
+ * @route GET /api/boards/team
+ * @desc 팀별 게시판의 게시글 목록을 최신순으로 조회 (페이지네이션 지원)
+ */
+exports.getTeamBoardPosts = async (req, res) => {
+  const { page = 1, limit = 20, includeCommentCount, title, author, teamCode } = req.query;
+  const offset = (page - 1) * limit;
+  const userId = req.user.id;
+  
+  try {
+    // 사용자의 팀 정보 조회
+    const userInfo = await dbGet(
+      "SELECT team_code FROM users WHERE id = ?",
+      [userId]
+    );
+    
+    if (!userInfo || !userInfo.team_code) {
+      return res.status(400).json({ error: "팀 정보가 없습니다." });
+    }
+    
+    // 팀 코드 결정 (요청된 팀 코드가 있으면 사용, 없으면 사용자의 팀)
+    const targetTeamCode = teamCode || userInfo.team_code;
+    
+    // 검색 조건 동적 생성
+    let whereClause = "b.type = 'TEAM' AND b.team_code = ?";
+    const params = [targetTeamCode];
+    
+    if (title) {
+      whereClause += " AND b.title LIKE ?";
+      params.push(`%${title}%`);
+    }
+    if (author) {
+      whereClause += " AND IFNULL(u.name, '') LIKE ?";
+      params.push(`%${author}%`);
+    }
+
+    // 게시글 목록 조회
+    let postsQuery = `
+      SELECT b.*, u.name as author_name, u.department_code, u.position_code
+    `;
+    if (includeCommentCount === 'true') {
+      postsQuery += `, (SELECT COUNT(*) FROM board_comments WHERE board_id = b.id) as comment_count `;
+    }
+    postsQuery += `
+      FROM boards b
+      LEFT JOIN users u ON b.created_by = u.id
+      WHERE ${whereClause}
+      ORDER BY b.created_at DESC
+      LIMIT ? OFFSET ?
+    `;
+    const posts = await dbAll(postsQuery, [...params, limit, offset]);
+
+    // 전체 게시글 수 (검색 조건 반영)
+    const countResult = await dbGet(
+      `SELECT COUNT(*) as total FROM boards b LEFT JOIN users u ON b.created_by = u.id WHERE ${whereClause}`,
+      params
+    );
+    const total = countResult.total;
+
+    logSystemAction(
+      req,
+      req.user,
+      LOG_ACTIONS.READ,
+      `팀별 게시판 조회: 팀 ${targetTeamCode}, ${posts.length}건 (페이지: ${page})`,
+      "info"
+    );
+
+    res.json({
+      posts,
+      teamCode: targetTeamCode,
+      pagination: {
+        current: parseInt(page),
+        total: Math.ceil(total / limit),
+        totalPosts: total,
+        hasNext: offset + posts.length < total,
+        hasPrev: page > 1
+      }
+    });
+  } catch (err) {
+    logSystemAction(
+      req,
+      req.user,
+      LOG_ACTIONS.READ_FAIL,
+      `팀별 게시판 조회 실패: ${err.message}`,
+      "error"
+    );
+    res.status(500).json({ error: "팀별 게시글 목록 조회 실패" });
+  }
+};
+
+/**
+ * 팀별 게시판 게시글 상세 조회
+ * @route GET /api/boards/team/:id
+ * @desc 특정 팀별 게시글의 상세 내용을 조회하고 조회수를 1 증가
+ */
+exports.getTeamBoardPost = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+  
+  try {
+    // 사용자의 팀 정보 조회
+    const userInfo = await dbGet(
+      "SELECT team_code FROM users WHERE id = ?",
+      [userId]
+    );
+    
+    if (!userInfo || !userInfo.team_code) {
+      return res.status(400).json({ error: "팀 정보가 없습니다." });
+    }
+    
+    // 조회수 증가
+    await dbRun("UPDATE boards SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ?", [id]);
+
+    // 게시글 조회 (같은 팀의 게시글만 조회 가능)
+    const post = await dbGet(
+      `SELECT b.*, u.name as author_name, u.department_code, u.position_code
+       FROM boards b
+       LEFT JOIN users u ON b.created_by = u.id
+       WHERE b.id = ? AND b.type = 'TEAM' AND b.team_code = ?`,
+      [id, userInfo.team_code]
+    );
+
+    if (!post) {
+      return res.status(404).json({ error: "게시글을 찾을 수 없습니다." });
+    }
+
+    // 첨부파일 목록 조회
+    const attachments = await dbAll(
+      `SELECT id, original_filename, file_size, mime_type, created_at, download_count
+       FROM board_attachments 
+       WHERE board_id = ? 
+       ORDER BY created_at ASC`,
+      [id]
+    );
+
+    const postWithAttachments = {
+      ...post,
+      attachments
+    };
+
+    logSystemAction(
+      req,
+      req.user,
+      LOG_ACTIONS.READ,
+      `팀별 게시글 상세 조회: ${post.title}`,
+      "info"
+    );
+
+    res.json(postWithAttachments);
+  } catch (err) {
+    logSystemAction(
+      req,
+      req.user,
+      LOG_ACTIONS.READ_FAIL,
+      `팀별 게시글 상세 조회 실패: ${err.message}`,
+      "error"
+    );
+    res.status(500).json({ error: "게시글 조회 실패" });
+  }
+};
+
+/**
+ * 팀별 게시판 게시글 작성
+ * @route POST /api/boards/team
+ * @desc 새로운 팀별 게시글을 작성
+ */
+exports.createTeamBoardPost = async (req, res) => {
+  const { title, content } = req.body;
+  const userId = req.user.id;
+  
+  // 입력값 검증
+  if (!title || !title.trim()) {
+    return res.status(400).json({ error: "제목은 필수입니다." });
+  }
+  
+  if (!content || !content.trim()) {
+    return res.status(400).json({ error: "내용은 필수입니다." });
+  }
+  
+  try {
+    // 사용자의 팀 정보 조회
+    const userInfo = await dbGet(
+      "SELECT team_code FROM users WHERE id = ?",
+      [userId]
+    );
+    
+    if (!userInfo || !userInfo.team_code) {
+      return res.status(400).json({ error: "팀 정보가 없습니다." });
+    }
+    
+    const createdAtKst = formatToKstString();
+    const result = await dbRun(
+      "INSERT INTO boards (type, team_code, title, content, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+      ["TEAM", userInfo.team_code, title.trim(), content.trim(), userId, createdAtKst]
+    );
+    
+    const newBoardId = result.lastID;
+    
+    // 임시 boardId로 업로드된 첨부파일들을 실제 boardId로 연결
+    await dbRun(
+      "UPDATE board_attachments SET board_id = ? WHERE board_id < 0 AND created_by = ? AND created_at > datetime('now', '-1 hour')",
+      [newBoardId, userId]
+    );
+    
+    const newPost = {
+      id: newBoardId,
+      type: "TEAM",
+      team_code: userInfo.team_code,
+      title: title.trim(),
+      content: content.trim(),
+      created_by: userId,
+      created_at: createdAtKst
+    };
+    
+    logSystemAction(
+      req,
+      req.user,
+      LOG_ACTIONS.BOARD_POST_CREATE,
+      `팀별 게시글 작성: ${title} (팀: ${userInfo.team_code})`,
+      "info"
+    );
+    
+    res.status(201).json(newPost);
+  } catch (err) {
+    logSystemAction(
+      req,
+      req.user,
+      LOG_ACTIONS.BOARD_POST_CREATE,
+      `팀별 게시글 작성 실패: ${err.message}`,
+      "error"
+    );
+    res.status(500).json({ error: "팀별 게시글 작성 실패" });
+  }
+};
+
+/**
+ * 팀별 게시판 게시글 수정
+ * @route PUT /api/boards/team/:id
+ * @desc 작성자만 팀별 게시글을 수정할 수 있음
+ */
+exports.updateTeamBoardPost = async (req, res) => {
+  const { id } = req.params;
+  const { title, content } = req.body;
+  const userId = req.user.id;
+  
+  // 입력값 검증
+  if (!title || !title.trim()) {
+    return res.status(400).json({ error: "제목은 필수입니다." });
+  }
+  
+  if (!content || !content.trim()) {
+    return res.status(400).json({ error: "내용은 필수입니다." });
+  }
+  
+  try {
+    // 게시글 존재 여부 및 작성자 확인
+    const existingPost = await dbGet(
+      "SELECT title, created_by FROM boards WHERE id = ? AND type = 'TEAM'",
+      [id]
+    );
+    
+    if (!existingPost) {
+      return res.status(404).json({ error: "게시글을 찾을 수 없습니다." });
+    }
+    
+    if (existingPost.created_by !== userId) {
+      return res.status(403).json({ error: "수정 권한이 없습니다." });
+    }
+    
+    // 게시글 수정
+    await dbRun(
+      "UPDATE boards SET title = ?, content = ?, updated_at = ? WHERE id = ?",
+      [title.trim(), content.trim(), formatToKstString(), id]
+    );
+    
+    logSystemAction(
+      req,
+      req.user,
+      LOG_ACTIONS.BOARD_POST_UPDATE,
+      `팀별 게시글 수정: ${existingPost.title}`,
+      "info"
+    );
+    
+    res.json({ message: "게시글이 수정되었습니다." });
+  } catch (err) {
+    logSystemAction(
+      req,
+      req.user,
+      LOG_ACTIONS.BOARD_POST_UPDATE,
+      `팀별 게시글 수정 실패: ${err.message}`,
+      "error"
+    );
+    res.status(500).json({ error: "게시글 수정 실패" });
+  }
+};
+
+/**
+ * 팀별 게시판 게시글 삭제
+ * @route DELETE /api/boards/team/:id
+ * @desc 작성자만 팀별 게시글을 삭제할 수 있음
+ */
+exports.deleteTeamBoardPost = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+  
+  try {
+    // 게시글 존재 여부 및 작성자 확인
+    const existingPost = await dbGet(
+      "SELECT title, created_by FROM boards WHERE id = ? AND type = 'TEAM'",
+      [id]
+    );
+    
+    if (!existingPost) {
+      return res.status(404).json({ error: "게시글을 찾을 수 없습니다." });
+    }
+    
+    if (existingPost.created_by !== userId) {
+      return res.status(403).json({ error: "삭제 권한이 없습니다." });
+    }
+    
+    // 게시글 삭제
+    await dbRun("DELETE FROM boards WHERE id = ?", [id]);
+    
+    logSystemAction(
+      req,
+      req.user,
+      LOG_ACTIONS.BOARD_POST_DELETE,
+      `팀별 게시글 삭제: ${existingPost.title}`,
+      "info"
+    );
+    
+    res.json({ message: "게시글이 삭제되었습니다." });
+  } catch (err) {
+    logSystemAction(
+      req,
+      req.user,
+      LOG_ACTIONS.BOARD_POST_DELETE,
+      `팀별 게시글 삭제 실패: ${err.message}`,
+      "error"
+    );
+    res.status(500).json({ error: "게시글 삭제 실패" });
+  }
 }; 

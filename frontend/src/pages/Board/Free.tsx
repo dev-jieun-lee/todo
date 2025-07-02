@@ -226,8 +226,8 @@ const Free = () => {
     <div className="container mx-auto p-4">
       {renderHeader()}
       {renderContent()}
-    </div>
-  );
+  </div>
+);
 };
 
 export default Free;

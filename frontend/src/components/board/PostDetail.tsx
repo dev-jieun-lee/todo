@@ -10,10 +10,9 @@
  * - 첨부파일 목록 표시 및 다운로드 기능
  * - 댓글 및 대댓글 기능 추가
  */
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader } from "../ui/card";
-import type { BoardPost, BoardAttachment } from "../../types/board";
-import { getAttachments } from "../../services/attachmentService";
+import type { BoardPost } from "../../types/board";
 import AttachmentList from "./AttachmentList";
 import CommentList from "./CommentList";
 import { useUser } from "../../contexts/useUser";
@@ -32,28 +31,17 @@ const PostDetail: React.FC<PostDetailProps> = ({
   onDelete,
 }) => {
   const { id: currentUserId } = useUser();
-  const [attachments, setAttachments] = useState<BoardAttachment[]>([]);
-  const [loadingAttachments, setLoadingAttachments] = useState(true);
-
-  // 첨부파일 목록 로드
-  useEffect(() => {
-    const loadAttachments = async () => {
-      try {
-        const attachmentList = await getAttachments(post.id);
-        setAttachments(attachmentList);
-      } catch (error) {
-        console.error('첨부파일 로드 실패:', error);
-      } finally {
-        setLoadingAttachments(false);
-      }
-    };
-
-    loadAttachments();
-  }, [post.id]);
-
+  
+  // 디버깅: 첨부파일 정보 확인
+  console.log('PostDetail - 게시글 정보:', post);
+  console.log('PostDetail - 첨부파일:', post.attachments);
+  
   // 첨부파일 삭제 처리
   const handleAttachmentDeleted = (attachmentId: number) => {
-    setAttachments(prev => prev.filter(att => att.id !== attachmentId));
+    // 첨부파일이 삭제되면 post.attachments에서도 제거
+    if (post.attachments) {
+      post.attachments = post.attachments.filter(att => att.id !== attachmentId);
+    }
   };
 
   /**
@@ -171,9 +159,9 @@ const PostDetail: React.FC<PostDetailProps> = ({
           </div>
 
           {/* 첨부파일 목록 */}
-          {!loadingAttachments && (
+          {post.attachments && post.attachments.length > 0 && (
             <AttachmentList
-              attachments={attachments}
+              attachments={post.attachments}
               boardCreatorId={post.created_by}
               onAttachmentDeleted={handleAttachmentDeleted}
             />

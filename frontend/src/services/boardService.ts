@@ -104,12 +104,12 @@ export const deleteBoardPost = async (
 };
 
 /**
- * 특정 게시글 상세 조회 (자유/공지 모두 지원)
+ * 특정 게시글 상세 조회 (자유/공지/팀 모두 지원)
  * @param postId - 조회할 게시글 ID
- * @param postType - 게시글 타입 ('FREE' 또는 'NOTICE')
+ * @param postType - 게시글 타입 ('FREE', 'NOTICE', 'TEAM')
  * @returns 게시글 상세 정보
  */
-export const getBoardPostById = async (postId: number, postType: 'FREE' | 'NOTICE'): Promise<BoardPost> => {
+export const getBoardPostById = async (postId: number, postType: 'FREE' | 'NOTICE' | 'TEAM'): Promise<BoardPost> => {
   try {
     const boardTypePath = postType.toLowerCase();
     const response = await api.get(`/boards/${boardTypePath}/${postId}`);
@@ -117,6 +117,107 @@ export const getBoardPostById = async (postId: number, postType: 'FREE' | 'NOTIC
   } catch (error) {
     console.error("게시글 상세 조회 실패:", error);
     throw new Error("게시글을 불러오는데 실패했습니다.");
+  }
+};
+
+// ===== 팀별 게시판 전용 서비스 =====
+
+/**
+ * 팀별 게시판 목록 조회
+ * @param page - 페이지 번호 (기본값: 1)
+ * @param limit - 페이지당 게시글 수 (기본값: 20)
+ * @param search - 검색 조건 (선택 가능한 파라미터: title, author, teamCode)
+ * @returns 팀별 게시글 목록과 페이지네이션 정보
+ */
+export const getTeamBoardPosts = async (
+  page: number = 1,
+  limit: number = 20,
+  search?: { title?: string; author?: string; teamCode?: string }
+): Promise<{ posts: BoardPost[]; teamCode: string; pagination: PaginationInfo }> => {
+  try {
+    const params = new URLSearchParams();
+    params.set('page', String(page));
+    params.set('limit', String(limit));
+    params.set('includeCommentCount', 'true');
+    if (search?.title) params.set('title', search.title);
+    if (search?.author) params.set('author', search.author);
+    if (search?.teamCode) params.set('teamCode', search.teamCode);
+    
+    const data = await api.get(`/boards/team?${params.toString()}`).then(r => r.data);
+    return {
+      posts: data.posts || [],
+      teamCode: data.teamCode || '',
+      pagination: data.pagination || {},
+    };
+  } catch (error) {
+    console.error("팀별 게시판 목록 조회 실패:", error);
+    throw new Error("팀별 게시글 목록을 불러오는데 실패했습니다.");
+  }
+};
+
+/**
+ * 팀별 게시글 작성
+ * @param postData - 팀별 게시글 작성 데이터
+ * @returns 생성된 팀별 게시글 정보
+ */
+export const createTeamBoardPost = async (
+  postData: BoardPostRequest
+): Promise<BoardPost> => {
+  try {
+    const response = await api.post("/boards/team", postData);
+    return response.data;
+  } catch (error) {
+    console.error("팀별 게시글 작성 실패:", error);
+    throw new Error("팀별 게시글 작성에 실패했습니다.");
+  }
+};
+
+/**
+ * 팀별 게시글 수정
+ * @param postId - 수정할 팀별 게시글 ID
+ * @param postData - 수정할 데이터
+ * @returns 수정 결과 메시지
+ */
+export const updateTeamBoardPost = async (
+  postId: number,
+  postData: BoardPostRequest
+): Promise<string> => {
+  try {
+    const response = await api.put(`/boards/team/${postId}`, postData);
+    return response.data.message;
+  } catch (error) {
+    console.error("팀별 게시글 수정 실패:", error);
+    throw new Error("팀별 게시글 수정에 실패했습니다.");
+  }
+};
+
+/**
+ * 팀별 게시글 삭제
+ * @param postId - 삭제할 팀별 게시글 ID
+ * @returns 삭제 결과 메시지
+ */
+export const deleteTeamBoardPost = async (postId: number): Promise<string> => {
+  try {
+    const response = await api.delete(`/boards/team/${postId}`);
+    return response.data.message;
+  } catch (error) {
+    console.error("팀별 게시글 삭제 실패:", error);
+    throw new Error("팀별 게시글 삭제에 실패했습니다.");
+  }
+};
+
+/**
+ * 팀별 게시글 상세 조회
+ * @param postId - 조회할 팀별 게시글 ID
+ * @returns 팀별 게시글 상세 정보
+ */
+export const getTeamBoardPostById = async (postId: number): Promise<BoardPost> => {
+  try {
+    const response = await api.get(`/boards/team/${postId}`);
+    return response.data;
+  } catch (error) {
+    console.error("팀별 게시글 상세 조회 실패:", error);
+    throw new Error("팀별 게시글을 불러오는데 실패했습니다.");
   }
 }; 
 

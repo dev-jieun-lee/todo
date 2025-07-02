@@ -12,7 +12,7 @@
  */
 
 // 게시판 유형 정의
-export type BoardType = "FREE" | "NOTICE";
+export type BoardType = "FREE" | "NOTICE" | "TEAM";
 
 // 작성자 정보
 export interface BoardAuthor {
@@ -63,6 +63,7 @@ export interface BoardPost {
   author_name?: string;
   department_code?: string;
   position_code?: string;
+  team_code?: string; // 팀별 게시판용
   // 새로운 필드들
   author: BoardAuthor;
   createdAt: string;
