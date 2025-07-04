@@ -30,4 +30,11 @@ router.post("/notice", boardController.createNoticeBoardPost);        // 공지�
 router.put("/notice/:id", boardController.updateNoticeBoardPost);     // 공지사항 수정
 router.delete("/notice/:id", boardController.deleteNoticeBoardPost);  // 공지사항 삭제
 
+// 팀별 게시판 라우트
+router.get("/team", boardController.getTeamBoardPosts);               // 팀별 게시글 목록 조회
+router.get("/team/:id", boardController.getTeamBoardPost);            // 팀별 게시글 상세 조회
+router.post("/team", boardController.createTeamBoardPost);            // 팀별 게시글 작성
+router.put("/team/:id", boardController.updateTeamBoardPost);         // 팀별 게시글 수정
+router.delete("/team/:id", boardController.deleteTeamBoardPost);      // 팀별 게시글 삭제
+
 module.exports = router; 

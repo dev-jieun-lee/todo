@@ -34,6 +34,10 @@ const AttachmentList: React.FC<AttachmentListProps> = ({
   const [downloadingFiles, setDownloadingFiles] = useState<Set<number>>(new Set());
   const [deletingFiles, setDeletingFiles] = useState<Set<number>>(new Set());
 
+  // 디버깅: 첨부파일 정보 확인
+  console.log('AttachmentList - 첨부파일 목록:', attachments);
+  console.log('AttachmentList - 첨부파일 개수:', attachments?.length || 0);
+
   // 첨부파일이 없으면 렌더링하지 않음
   if (!attachments || attachments.length === 0) {
     return null;

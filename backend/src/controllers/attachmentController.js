@@ -32,9 +32,48 @@ exports.uploadAttachment = async (req, res) => {
   }
 
   try {
-    // 게시글 존재 여부 및 권한 확인
+    // 임시 boardId 처리 (음수인 경우)
+    if (boardId < 0) {
+      // 임시 ID인 경우 데이터베이스에 저장하고 나중에 실제 게시글 ID로 연결
+      const result = await dbRun(
+        `INSERT INTO board_attachments 
+         (board_id, original_filename, stored_filename, file_path, file_size, mime_type, created_by) 
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          boardId,
+          req.file.originalname,
+          req.file.filename,
+          req.file.path,
+          req.file.size,
+          req.file.mimetype,
+          userId
+        ]
+      );
+
+      const attachment = {
+        id: result.lastID,
+        board_id: boardId,
+        original_filename: req.file.originalname,
+        stored_filename: req.file.filename,
+        file_size: req.file.size,
+        mime_type: req.file.mimetype,
+        created_at: new Date().toISOString()
+      };
+
+      logSystemAction(
+        req,
+        req.user,
+        LOG_ACTIONS.FILE_UPLOAD,
+        `임시 첨부파일 업로드: ${req.file.originalname} (임시 ID: ${boardId})`,
+        "info"
+      );
+
+      return res.status(201).json(attachment);
+    }
+
+    // 실제 게시글 존재 여부 및 권한 확인
     const board = await dbGet(
-      "SELECT created_by FROM boards WHERE id = ?",
+      "SELECT created_by, type FROM boards WHERE id = ?",
       [boardId]
     );
 
@@ -42,8 +81,26 @@ exports.uploadAttachment = async (req, res) => {
       return res.status(404).json({ error: "게시글을 찾을 수 없습니다." });
     }
 
-    if (board.created_by !== userId) {
-      return res.status(403).json({ error: "첨부파일 업로드 권한이 없습니다." });
+    // 팀별 게시판의 경우 같은 팀 사용자만 업로드 가능
+    if (board.type === 'TEAM') {
+      const userInfo = await dbGet(
+        "SELECT team_code FROM users WHERE id = ?",
+        [userId]
+      );
+      
+      const boardTeamInfo = await dbGet(
+        "SELECT team_code FROM boards WHERE id = ?",
+        [boardId]
+      );
+      
+      if (!userInfo || !boardTeamInfo || userInfo.team_code !== boardTeamInfo.team_code) {
+        return res.status(403).json({ error: "같은 팀 사용자만 첨부파일을 업로드할 수 있습니다." });
+      }
+    } else {
+      // 자유게시판/공지사항의 경우 작성자만 업로드 가능
+      if (board.created_by !== userId) {
+        return res.status(403).json({ error: "첨부파일 업로드 권한이 없습니다." });
+      }
     }
 
     // 첨부파일 정보 저장
@@ -100,8 +157,31 @@ exports.uploadAttachment = async (req, res) => {
  */
 exports.getAttachments = async (req, res) => {
   const { boardId } = req.params;
+  const userId = req.user.id;
 
   try {
+    // 게시글 정보 조회 (권한 확인용)
+    const board = await dbGet(
+      "SELECT type, team_code FROM boards WHERE id = ?",
+      [boardId]
+    );
+
+    if (!board) {
+      return res.status(404).json({ error: "게시글을 찾을 수 없습니다." });
+    }
+
+    // 팀별 게시판의 경우 같은 팀 사용자만 조회 가능
+    if (board.type === 'TEAM') {
+      const userInfo = await dbGet(
+        "SELECT team_code FROM users WHERE id = ?",
+        [userId]
+      );
+      
+      if (!userInfo || userInfo.team_code !== board.team_code) {
+        return res.status(403).json({ error: "같은 팀 사용자만 첨부파일을 조회할 수 있습니다." });
+      }
+    }
+
     const attachments = await dbAll(
       `SELECT id, original_filename, file_size, mime_type, created_at 
        FROM board_attachments 
@@ -130,15 +210,31 @@ exports.getAttachments = async (req, res) => {
  */
 exports.downloadAttachment = async (req, res) => {
   const { id } = req.params;
+  const userId = req.user.id;
 
   try {
     const attachment = await dbGet(
-      "SELECT * FROM board_attachments WHERE id = ?",
+      `SELECT ba.*, b.type, b.team_code 
+       FROM board_attachments ba
+       JOIN boards b ON ba.board_id = b.id
+       WHERE ba.id = ?`,
       [id]
     );
 
     if (!attachment) {
       return res.status(404).json({ error: "첨부파일을 찾을 수 없습니다." });
+    }
+
+    // 팀별 게시판의 경우 같은 팀 사용자만 다운로드 가능
+    if (attachment.type === 'TEAM') {
+      const userInfo = await dbGet(
+        "SELECT team_code FROM users WHERE id = ?",
+        [userId]
+      );
+      
+      if (!userInfo || userInfo.team_code !== attachment.team_code) {
+        return res.status(403).json({ error: "같은 팀 사용자만 첨부파일을 다운로드할 수 있습니다." });
+      }
     }
 
     const filePath = attachment.file_path;
@@ -185,7 +281,7 @@ exports.deleteAttachment = async (req, res) => {
 
   try {
     const attachment = await dbGet(
-      `SELECT ba.*, b.created_by as board_creator 
+      `SELECT ba.*, b.created_by as board_creator, b.type, b.team_code 
        FROM board_attachments ba
        JOIN boards b ON ba.board_id = b.id
        WHERE ba.id = ?`,
@@ -194,6 +290,18 @@ exports.deleteAttachment = async (req, res) => {
 
     if (!attachment) {
       return res.status(404).json({ error: "첨부파일을 찾을 수 없습니다." });
+    }
+
+    // 팀별 게시판의 경우 같은 팀 사용자만 삭제 가능
+    if (attachment.type === 'TEAM') {
+      const userInfo = await dbGet(
+        "SELECT team_code FROM users WHERE id = ?",
+        [userId]
+      );
+      
+      if (!userInfo || userInfo.team_code !== attachment.team_code) {
+        return res.status(403).json({ error: "같은 팀 사용자만 첨부파일을 삭제할 수 있습니다." });
+      }
     }
 
     // 권한 확인 (게시글 작성자 또는 첨부파일 업로더)
