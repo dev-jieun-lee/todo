@@ -1,0 +1,40 @@
+apologize : 사과하다
+confuse : 혼동하다, 혼란시키다
+disorder : 무질서, 혼란, 장애
+gather : 모이다, 모으다
+recommend : 권장하다, 추천하다
+suppose : 가정하다, 추정하다
+accident : 사고,재난, 우연
+adjust : 조정하다, 조절하다
+aspect : 측면, 양상, 관점
+purchase : 구입하다, 구입, 구입품
+purpose : 목적, 의도, 결심
+organzie : 조작하다, 준비하다, 정리하다
+arrange : 정리하다, 준비하다
+communicate : 의사소통을 하다, (정보를)전달하다
+represent : 대표하다, 나타내다, 대변하다
+treatment : 치료, 대우, 처리
+approach : 접근하다, 접근
+claim : 주장하다, 요구하다, 주장,요구, 청구
+disappoint : 실망시키다, 낙담하다
+observe : 고나찰하다, 목격하다, 준수하다
+compare : 비교하다, 비유하다
+alarm : 경보, 불안, 불안하게하다, 경보를발하다
+exist : 존재하다, (근근이)살아가다
+attract : 끌다, 끌어들이다, 매혹하다
+crucial : 결정적인, 중대한
+display : 전시하다, 드러내다, 전시
+exhibit : 전시하다, 보이다, 전시품
+describe : 묘사하다, 설명하다
+reward : 보상, 사례금, 보상하다
+motivate : 동기를 부여하다
+general : 일반적인, 보통의, 종합적인, 장군
+universal : 보편적인, 전세계의, 우주의
+sepcific : 구체적인, 특정한, 특유의
+fee : 수수료, 요금
+demand : 요구하다, 요구, 수요
+handle : 다루다, 처리하다, 손잡이
+manage : 관리하다, 다루다, 용케해내다
+refer to : ~을 가리키다, ~을 언급하다, ~을 참고하다
+take on : ~을 떠밀다, ~을 고용하다, (특정한 특징을)띠다
+pay attention to : ~에 유의하다, ~에 주목하다
